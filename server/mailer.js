@@ -56,7 +56,12 @@ async function sendResultEmail({ submission, pdfBuffer }) {
       reply_to: email || undefined,
       subject,
       text,
-      attachments: [{ filename, content: pdfBuffer.toString('base64') }],
+      // puppeteer's page.pdf() returns a plain Uint8Array, not a Node
+      // Buffer — Uint8Array#toString() silently ignores the 'base64' arg
+      // and returns a garbage comma-joined decimal string instead, which
+      // is what was actually being sent as the attachment. Buffer.from()
+      // wraps it so toString('base64') behaves correctly.
+      attachments: [{ filename, content: Buffer.from(pdfBuffer).toString('base64') }],
     }),
   });
 

@@ -65,6 +65,7 @@ app.post('/api/submit', async (req, res) => {
     });
 
     const pdfBuffer = await buildResultPdf({ submission, questions: QUESTIONS });
+    console.log(`Generated PDF: ${pdfBuffer.length} bytes, starts with: ${Buffer.from(pdfBuffer.subarray(0, 8)).toString('latin1')}`);
     await sendResultEmail({ submission, pdfBuffer });
 
     res.json({ ok: true, score, passed });
