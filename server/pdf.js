@@ -101,7 +101,11 @@ async function buildResultPdf({ submission, questions }) {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // 'domcontentloaded' avoids hanging on unrelated keep-alive connections
+    // (seen on Render's network) that 'networkidle0' waits out; we instead
+    // wait specifically for the Heebo webfont to finish loading below.
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.evaluate(() => document.fonts.ready).catch(() => {});
     return await page.pdf({ format: 'A4', printBackground: true });
   } finally {
     await page.close();
