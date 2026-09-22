@@ -2,8 +2,35 @@
 // exact same markup/CSS as the old client-side #printable block), so the
 // emailed PDF never depends on the driver's browser or html2canvas.
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+
+// The Heebo webfont is embedded as base64 (not loaded from Google Fonts at
+// render time) — on Render's network, that fetch was unreliable, silently
+// falling back to a font with no Hebrew glyphs and producing "???" in the
+// PDF. Embedding removes the network dependency entirely.
+const HEEBO_HEBREW_B64 = fs.readFileSync(path.join(__dirname, 'fonts', 'heebo-hebrew.woff2')).toString('base64');
+const HEEBO_LATIN_B64 = fs.readFileSync(path.join(__dirname, 'fonts', 'heebo-latin.woff2')).toString('base64');
+
+const FONT_FACE_CSS = `
+  @font-face{
+    font-family:'Heebo';
+    font-style:normal;
+    font-weight:100 900;
+    src:url(data:font/woff2;base64,${HEEBO_HEBREW_B64}) format('woff2');
+    unicode-range:U+0307-0308,U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F;
+  }
+  @font-face{
+    font-family:'Heebo';
+    font-style:normal;
+    font-weight:100 900;
+    src:url(data:font/woff2;base64,${HEEBO_LATIN_B64}) format('woff2');
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122;
+  }
+`;
 
 const PRINTABLE_CSS = `
+  ${FONT_FACE_CSS}
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Heebo', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;color:#16212C;direction:rtl;background:#fff;}
   .p-header{background:#0A1826;color:#fff;padding:26px 34px;border-bottom:6px solid #FFC63C;}
@@ -65,9 +92,6 @@ function buildHtml({ submission, questions }) {
   const now = new Date();
 
   return `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${PRINTABLE_CSS}</style></head><body>
 <div class="p-header"><h2>מבחן בטיחות – נהגי טאג</h2><p>מסוף מכולות · דוח תוצאה אישי</p></div>
 <div class="p-details"><table>
