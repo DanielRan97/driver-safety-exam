@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מבחן בטיחות – נהגי טאג</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#0F2438;
+    --navy-deep:#0A1826;
+    --white:#FFFFFF;
+    --yellow:#FFC63C;
+    --yellow-dark:#D9A82A;
+    --ink:#16212C;
+    --muted:#64707C;
+    --line:#E3E7EA;
+    --danger:#C6432A;
+    --danger-bg:#FBEAE6;
+    --success:#2E7D4F;
+    --success-bg:#E9F3EC;
+    --radius:12px;
+    --font: 'Heebo', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --navy:#0B1D2E; --navy-deep:#071320; }
+  }
+  :root[data-theme="dark"]{ --navy:#0B1D2E; --navy-deep:#071320; }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:var(--font);
+    background:var(--navy);
+    color:var(--ink);
+    min-height:100%;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+
+  .page{
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px 16px 40px;
+  }
+
+  .card{
+    width:100%;
+    max-width:640px;
+    background:var(--white);
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+
+  .card-head{
+    background:var(--navy-deep);
+    color:var(--white);
+    padding:20px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    border-bottom:4px solid var(--yellow);
+  }
+  .card-head-left{display:flex;align-items:center;gap:14px;min-width:0;}
+  .card-head svg{flex:0 0 auto;}
+  .card-head h1{
+    font-size:18px;
+    font-weight:700;
+    margin:0;
+    line-height:1.35;
+  }
+  @media (max-width:480px){ .card-head h1{font-size:16px;} }
+
+  #lang-select{
+    flex:0 0 auto;
+    background:rgba(255,255,255,.08);
+    color:var(--white);
+    border:1.5px solid rgba(255,255,255,.35);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:var(--font);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  #lang-select option{color:#16212C;}
+
+  .card-body{padding:24px;}
+  @media (max-width:480px){ .card-body{padding:18px;} .card-head{padding:16px;} }
+
+  /* ---- details form ---- */
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--ink);
+  }
+  .field input{
+    width:100%;
+    font-family:var(--font);
+    font-size:17px;
+    padding:13px 14px;
+    border-radius:9px;
+    border:2px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+    transition:border-color .15s;
+  }
+  .field input:focus{
+    outline:none;
+    border-color:var(--navy);
+  }
+  .field.has-error input{
+    border-color:var(--danger);
+    background:var(--danger-bg);
+  }
+  .field .err-msg{
+    display:none;
+    color:var(--danger);
+    font-size:13px;
+    margin-top:6px;
+    font-weight:600;
+  }
+  .field.has-error .err-msg{display:block;}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  @media (max-width:480px){ .form-grid{grid-template-columns:1fr;} }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:15px 18px;
+    font-family:var(--font);
+    font-size:17px;
+    font-weight:700;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    transition:transform .08s, filter .15s;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--yellow);color:var(--navy-deep);}
+  .btn-primary:hover{filter:brightness(1.05);}
+  .btn-primary:disabled{background:#EADFC4;color:#9A9686;cursor:not-allowed;}
+  .btn-outline{background:transparent;color:var(--navy);border:2px solid var(--line);}
+
+  .top-alert{
+    display:none;
+    background:var(--danger-bg);
+    color:var(--danger);
+    border:2px solid var(--danger);
+    border-radius:9px;
+    padding:12px 14px;
+    font-size:14px;
+    font-weight:700;
+    margin-bottom:18px;
+  }
+  .top-alert.show{display:block;}
+
+  /* ---- quiz ---- */
+  .progress-wrap{
+    position:sticky;
+    top:0;
+    background:#fff;
+    padding:14px 24px 10px;
+    border-bottom:1px solid var(--line);
+    z-index:5;
+  }
+  @media (max-width:480px){ .progress-wrap{padding:12px 18px 8px;} }
+  .progress-text{font-size:14px;font-weight:700;color:var(--navy-deep);margin-bottom:8px;}
+  .progress-bar-bg{background:var(--line);border-radius:6px;height:8px;overflow:hidden;}
+  .progress-bar-fill{background:var(--yellow-dark);height:100%;width:0%;transition:width .2s;}
+
+  .qlist{padding:22px 24px 4px;}
+  @media (max-width:480px){ .qlist{padding:16px 18px 4px;} }
+
+  .qblock{
+    border:2px solid var(--line);
+    border-radius:11px;
+    padding:16px;
+    margin-bottom:16px;
+    transition:border-color .15s, background .15s;
+  }
+  .qblock.q-error{border-color:var(--danger);background:var(--danger-bg);}
+  .qnum{
+    display:inline-block;
+    font-size:13px;
+    font-weight:800;
+    color:var(--navy-deep);
+    background:var(--yellow);
+    border-radius:6px;
+    padding:2px 9px;
+    margin-bottom:10px;
+  }
+  .qtext{font-size:16px;font-weight:600;line-height:1.5;margin-bottom:14px;}
+  .opts{display:flex;flex-direction:column;gap:9px;}
+  .opt{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    border:2px solid var(--line);
+    border-radius:9px;
+    padding:12px 14px;
+    cursor:pointer;
+    font-size:15.5px;
+    line-height:1.45;
+    background:#fff;
+    transition:border-color .12s, background .12s;
+  }
+  .opt:hover{border-color:#B9C6D3;}
+  .opt input{margin-top:3px;flex:0 0 auto;width:19px;height:19px;accent-color:var(--navy);}
+  .opt.selected{border-color:var(--navy);background:#EFF3F7;font-weight:600;}
+
+  .footer-bar{
+    position:sticky;
+    bottom:0;
+    background:#fff;
+    border-top:1px solid var(--line);
+    padding:14px 24px;
+    padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  }
+  @media (max-width:480px){ .footer-bar{padding:12px 18px;} }
+
+  /* ---- result ---- */
+  .result-wrap{padding:8px 4px 4px;text-align:center;}
+  .score-circle{
+    width:150px;height:150px;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    margin:10px auto 18px;
+    border:8px solid var(--line);
+  }
+  .score-circle.pass{border-color:var(--success);background:var(--success-bg);}
+  .score-circle.fail{border-color:var(--danger);background:var(--danger-bg);}
+  .score-num{font-size:42px;font-weight:800;line-height:1;}
+  .score-circle.pass .score-num{color:var(--success);}
+  .score-circle.fail .score-num{color:var(--danger);}
+  .score-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+  .result-title{font-size:20px;font-weight:800;margin:0 0 6px;}
+  .result-title.pass{color:var(--success);}
+  .result-title.fail{color:var(--danger);}
+  .result-desc{color:var(--muted);font-size:15px;margin:0 0 22px;line-height:1.5;}
+  .result-actions{display:flex;flex-direction:column;gap:10px;}
+  .result-summary{
+    text-align:start;
+    background:#F7F9FA;
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:20px;
+    font-size:14px;
+    color:var(--ink);
+    line-height:1.9;
+  }
+  .result-summary b{font-weight:700;}
+
+  .hidden{display:none !important;}
+
+  /* printable area, rendered off-screen for the PDF snapshot — always Hebrew */
+  #printable{
+    position:absolute;
+    top:0;
+    right:-99999px;
+    width:794px;
+    background:#fff;
+    font-family:var(--font);
+    color:#16212C;
+    direction:rtl;
+  }
+  #printable .p-header{background:#0A1826;color:#fff;padding:26px 34px;border-bottom:6px solid #FFC63C;}
+  #printable .p-header h2{margin:0 0 4px;font-size:22px;}
+  #printable .p-header p{margin:0;color:#B9C6D3;font-size:13px;}
+  #printable .p-details{padding:20px 34px;border-bottom:1px solid #E3E7EA;}
+  #printable .p-details table{width:100%;border-collapse:collapse;font-size:13px;}
+  #printable .p-details td{padding:4px 0;}
+  #printable .p-details td.k{color:#64707C;width:130px;}
+  #printable .p-details td.v{font-weight:700;}
+  #printable .p-score{padding:18px 34px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #E3E7EA;}
+  #printable .p-score .num{font-size:34px;font-weight:800;}
+  #printable .p-score .num.pass{color:#2E7D4F;}
+  #printable .p-score .num.fail{color:#C6432A;}
+  #printable .p-score .lbl{font-size:14px;font-weight:700;}
+  #printable .p-q{padding:14px 34px;border-bottom:1px solid #EEF1F2;}
+  #printable .p-q .qn{font-size:12px;font-weight:800;background:#FFC63C;color:#0A1826;border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:6px;}
+  #printable .p-q .qt{font-size:13.5px;font-weight:600;margin-bottom:8px;line-height:1.5;}
+  #printable .p-q .oa{font-size:12.5px;padding:5px 10px;border-radius:6px;margin-bottom:4px;border:1px solid #E3E7EA;}
+  #printable .p-q .oa.correct{background:#E9F3EC;border-color:#2E7D4F;color:#2E7D4F;font-weight:700;}
+  #printable .p-q .oa.wrong{background:#FBEAE6;border-color:#C6432A;color:#C6432A;font-weight:700;}
+  #printable .p-foot{padding:16px 34px;font-size:11px;color:#8993A0;}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 39c3-2 6-2 9 0s6 2 9 0 6-2 9 0 6 2 9 0 6-2 9 0" stroke="#FFC63C" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M14 39V16l8-6 8 6v23" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M9 16h30" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M34 16v5" stroke="#FFC63C" stroke-width="2" stroke-linecap="round"/>
+          <rect x="28.5" y="21" width="11" height="8" rx="1" stroke="#FFC63C" stroke-width="2"/>
+        </svg>
+        <h1 id="txt-header-title">מבחן בטיחות – נהגי טאג</h1>
+      </div>
+      <select id="lang-select" aria-label="שפה">
+        <option value="he">עברית</option>
+        <option value="en">English</option>
+        <option value="ar">العربية</option>
+        <option value="ru">Русский</option>
+        <option value="zh">中文</option>
+        <option value="pt">Português</option>
+      </select>
+    </div>
+
+    <div class="card-body">
+
+      <!-- ===== screen 1: details ===== -->
+      <div id="screen-details">
+        <div id="details-alert" class="top-alert"></div>
+
+        <div class="form-grid">
+          <div class="field" data-field="first">
+            <label for="f-first" id="lbl-first"></label>
+            <input id="f-first" type="text" autocomplete="given-name">
+            <div class="err-msg" id="err-first"></div>
+          </div>
+          <div class="field" data-field="last">
+            <label for="f-last" id="lbl-last"></label>
+            <input id="f-last" type="text" autocomplete="family-name">
+            <div class="err-msg" id="err-last"></div>
+          </div>
+        </div>
+
+        <div class="field" data-field="email">
+          <label for="f-email" id="lbl-email"></label>
+          <input id="f-email" type="email" autocomplete="email" dir="ltr">
+          <div class="err-msg" id="err-email"></div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field" data-field="id">
+            <label for="f-id" id="lbl-id"></label>
+            <input id="f-id" type="text" inputmode="numeric" dir="ltr">
+            <div class="err-msg" id="err-id"></div>
+          </div>
+          <div class="field" data-field="empnum">
+            <label for="f-empnum" id="lbl-empnum"></label>
+            <input id="f-empnum" type="text" inputmode="numeric" dir="ltr" maxlength="4">
+            <div class="err-msg" id="err-empnum"></div>
+          </div>
+        </div>
+
+        <div class="field" data-field="date">
+          <label for="f-date" id="lbl-date"></label>
+          <input id="f-date" type="date">
+          <div class="err-msg" id="err-date"></div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-to-quiz" style="margin-top:6px;"></button>
+      </div>
+
+      <!-- ===== screen 2: quiz ===== -->
+      <div id="screen-quiz" class="hidden" style="margin:-24px;">
+        <div class="progress-wrap">
+          <div class="progress-text" id="progress-text"></div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+        </div>
+        <div style="padding:0 24px;">
+          <div id="quiz-alert" class="top-alert" style="margin-top:16px;"></div>
+        </div>
+        <div class="qlist" id="qlist"></div>
+        <div class="footer-bar">
+          <button class="btn btn-primary" id="btn-finish"></button>
+        </div>
+      </div>
+
+      <!-- ===== screen 3: result ===== -->
+      <div id="screen-result" class="hidden">
+        <div class="result-wrap">
+          <div class="score-circle" id="score-circle">
+            <div class="score-num" id="score-num">0</div>
+            <div class="score-sub" id="score-sub"></div>
+          </div>
+          <h2 class="result-title" id="result-title"></h2>
+          <p class="result-desc" id="result-desc"></p>
+          <div id="submit-status" style="font-size:13px;font-weight:700;margin:-6px 0 18px;padding:10px 14px;border-radius:9px;background:#F7F9FA;color:var(--muted);"></div>
+          <div class="result-summary" id="result-summary"></div>
+          <div class="result-actions">
+            <button class="btn btn-primary" id="btn-pdf"></button>
+          </div>
+
+          <div id="email-step" class="hidden" style="margin-top:20px;background:#F7F9FA;border:2px solid var(--line);border-radius:11px;padding:16px 18px;">
+            <div id="email-step-title" style="font-weight:800;font-size:15px;margin-bottom:6px;"></div>
+            <div id="email-step-desc" style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:14px;"></div>
+            <a id="btn-mailto" class="btn btn-outline" href="#" style="text-decoration:none;"></a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- off-screen printable content for PDF snapshot — always in Hebrew -->
+<div id="printable"></div>
+
+<script>
+(function(){
+
+
+  var PASS_SCORE = 100; // ציון עובר יחיד: 100 (כל שאלה שווה 5 נק')
+  var EMAIL_TO = 'efi@almogsea.co.il'; // כתובת המייל שאליה נשלחות התוצאות
+
+  // ---------------------------------------------------------------
+  // Hebrew source data — always used for scoring, the PDF and the email,
+  // regardless of which language the driver used to take the exam.
+  // ---------------------------------------------------------------
+  var QUESTIONS_HE = [
+    {q:"הסתיימה טעינה מתחת למנוף האונייה (STS). אתת הרציף הזיז את הקונוס וסימן לך לצאת. מה עליך לוודא לפני תחילת הנסיעה?",
+     opts:["שהדרך פנויה, ואז ניתן לצאת בהתאם לסימון האתת.","שהמכולה מונחת על העגלה, שהספרדר מנותק לחלוטין ומורם לגובה בטוח, ושהדרך פנויה.","שהספרדר התחיל לעלות, ואז ניתן להתחיל לצאת באיטיות.","שהאתת נשאר בקשר עין עם הנהג בזמן היציאה."], correct:1},
+    {q:"מתבצעת פריקה מהטאג אל האונייה מתחת למנוף האונייה (STS). מתי מותר להתחיל לצאת?",
+     opts:["ברגע שהספרדר ננעל על המכולה והאתת מסמן לצאת.","ברגע שהמכולה מתחילה להתרומם והדרך נראית פנויה.","רק לאחר שהמכולה הורמה לחלוטין מהעגלה, התרחקה מהטאג והגיעה לגובה בטוח ליציאה.","מיד לאחר שהאתת הזיז את הקונוס ואין טאג נוסף מלפנים."], correct:2},
+    {q:"מתבצעת פריקה מהטאג אל הבלוק באמצעות מנוף האחסנה (ARMG). רמזור היציאה מאפשר נסיעה, אך המכולה עדיין מעל הטאג ועדיין לא נכנסה לבלוק. מה עושים?",
+     opts:["נשארים במקום עד שהמכולה נכנסה לבלוק ואין מטען תלוי מעל הטאג או נתיב היציאה.","יוצאים מכיוון שרמזור היציאה כבר מאפשר נסיעה.","מתחילים לצאת באיטיות בזמן שהמכולה ממשיכה לעלות.","יוצאים כל עוד לא נשמעת צפירה מהמנוף."], correct:0},
+    {q:"מתבצעת טעינה מהבלוק אל הטאג באמצעות מנוף האחסנה (ARMG). המכולה כבר מונחת על העגלה ורמזור היציאה מאפשר נסיעה, אך הספרדר עדיין מחובר. מה עושים?",
+     opts:["מתחילים לצאת באיטיות משום שהמכולה כבר מונחת על העגלה.","ממתינים מספר שניות ויוצאים אם הרמזור עדיין מאפשר זאת.","מתחילים לצאת כל עוד הספרדר אינו מפעיל לחץ על המכולה.","ממתינים עד שהספרדר מנותק לחלוטין ומורם לגובה בטוח, ורק לאחר שהדרך פנויה יוצאים."], correct:3},
+    {q:"נהג נוסע במהירות של 28 קמ״ש ומתקרב לאזור צפוף מתחת למנוף האונייה (STS). אין לפניו כלי שחוסם אותו. מה נכון?",
+     opts:["אפשר להמשיך במהירות של 28 קמ״ש משום שהמהירות המותרת היא עד 30 קמ״ש.","יש להתאים את המהירות לתנאי השטח גם אם המהירות תהיה נמוכה משמעותית מ־30 קמ״ש.","יש להאט רק אם האתת או מנהל המשמרת מבקשים זאת.","ניתן להמשיך במהירות הקיימת אם הטאג נוסע ללא מכולה."], correct:1},
+    {q:"נדרש לבצע נסיעה לאחור של כשלושה מטרים בלבד. הנהג יצא מהטאג, בדק שאין אף אחד מאחור וחזר לקבינה. אין מכוון זמין. מה נכון לעשות?",
+     opts:["לבצע את הנסיעה לאחור באיטיות מכיוון שהשטח נבדק מראש.","לבצע את הנסיעה באמצעות המראות והחלון הפתוח.","לא לבצע נסיעה לאחור עד לקבלת מכוון או הסיוע הנדרש.","ניתן לבצע את הנסיעה אם הטאג נוסע ללא עגלה."], correct:2},
+    {q:"נהג צריך לנתק עגלה. מנהל המשמרת נמצא באזור אך עסוק כרגע במשימה אחרת. מה נכון לעשות?",
+     opts:["להמתין ולבצע את הניתוק רק בנוכחות או בפיקוח מנהל המשמרת.","להתחיל את הניתוק ולהמתין למנהל המשמרת רק לפני תחילת הנסיעה.","לבקש מנהג מנוסה אחר לפקח על הניתוק.","להוריד את רגלי העגלה ולנתק את צינורות האוויר, אך לא להזיז את הטאג."], correct:0},
+    {q:"לאחר ניתוק עגלה, רגלי העגלה כבר הורדו והיא עומדת בצורה יציבה. מה יש לבדוק לפני שמתחילים לנסוע?",
+     opts:["שרגלי העגלה יציבות ושהדרך קדימה פנויה.","שהטאג ישר ושהחיבור לעגלה נראה משוחרר.","שאין כלי רכב אחר בקרבת העגלה.","שכל החיבורים הרלוונטיים נותקו, כולל צינורות אוויר וכבלים, ושהעגלה מאובטחת כנדרש."], correct:3},
+    {q:"במהלך היפוך מכולה באמצעות ריץ' סטאקר, הנהג נכנס למקום בהתאם להדרכה אך הטאג אינו מיושר היטב. לאחר ניסיון תיקון קטן הנהג עדיין אינו בטוח במיקום. מה עליו לעשות?",
+     opts:["לצאת מהאזור ולחזור בנסיעה לאחור כדי לנסות להתיישר מחדש.","לעצור ולקרוא לראש הצוות או למנהל המשמרת לקבלת הכוונה.","להמשיך לבצע תיקונים קטנים עד שהטאג יהיה מיושר.","לבקש ממפעיל הריץ' סטאקר להכווין אותו באמצעות צפירות."], correct:1},
+    {q:"במהלך עבודה עם ריץ' סטאקר, המפעיל משמיע צפירה אחת. הנהג אינו רואה סכנה ברורה. מה עליו לעשות?",
+     opts:["להאט ולהמשיך בזהירות.","לעצור רק אם נשמעת צפירה נוספת.","לעצור מיד ולהמתין עד שניתן להמשיך בבטחה.","להמשיך כל עוד המכולה אינה באוויר."], correct:2},
+    {q:"נתיב הנסיעה חסום וטאגים נוספים ממתינים מאחור. ניתן לבצע פניית פרסה במקום שאינו מיועד לכך וכך לחסוך זמן. מה עושים?",
+     opts:["עוצרים ופונים למנהל המשמרת לקבלת הנחיות, ולא מבצעים תמרון אסור.","מבצעים פניית פרסה בזהירות מכיוון שהנתיב חסום.","מבצעים את פניית הפרסה אם עובד אחר מכוון את הנהג.","ניתן לבצע את התמרון אם העגלה ריקה."], correct:0},
+    {q:"נהג מקבל טאג באמצע המשמרת. הנהג הקודם ביצע צ'קליסט מלא לפני כשעה והכול היה תקין. מה נכון לעשות?",
+     opts:["לבדוק רק אם נגרם נזק חדש מאז הבדיקה הקודמת.","להסתמך על הצ'קליסט הקודם אם הוא חתום ומלא.","לבצע צ'קליסט חדש רק אם הנהג מזהה תקלה.","לבצע צ'קליסט חדש משום שהתבצעה החלפת טאג או נהג."], correct:3},
+    {q:"קיים מטען תלוי מעל נתיב הנסיעה, אך נראה שיש מספיק מרווח לעבור מתחתיו. מה נכון לעשות?",
+     opts:["לעבור באיטיות אם המטען נמצא בגובה מספיק.","להמתין עד שאין מטען תלוי מעל הטאג או מעל נתיב הנסיעה.","באזור מנוף האחסנה ניתן לעבור אם רמזור היציאה מאפשר נסיעה.","להתקדם עד קצה האזור ולהמתין שם."], correct:1},
+    {q:"נהג צריך לצאת מהטאג לזמן קצר. הוא נועל נעלי בטיחות ולובש אפוד זוהר, אך הקסדה נמצאת במקום אחר. מה נכון לעשות?",
+     opts:["ניתן לצאת מכיוון שהנהג נשאר קרוב לטאג.","ניתן לצאת אם אין כרגע פעילות מנוף באזור.","אין לצאת מהטאג עד שהנהג מצויד בכל ציוד המגן הנדרש.","ניתן לצאת אם מנהל המשמרת יודע על כך."], correct:2},
+    {q:"במהלך נסיעה איטית בשטח פתוח מתקבלת בטלפון הודעה הקשורה לעבודה. אין כרגע תנועה מסביב. מה נכון לעשות?",
+     opts:["לעצור במקום בטוח ולהשתמש בטלפון רק כאשר הטאג אינו בתנועה.","ניתן לקרוא את ההודעה בלבד, כל עוד לא מקלידים.","ניתן להשתמש בטלפון אם מהירות הנסיעה נמוכה מאוד.","ניתן להציץ במהירות אם הדרך פנויה."], correct:0},
+    {q:"הנהג חוזר מהפסקה לאותו טאג שבו השתמש קודם. אף נהג אחר לא השתמש בטאג בזמן ההפסקה. מה נכון לעשות לפני תחילת הנסיעה?",
+     opts:["ניתן להתחיל לנסוע אם הטאג נשאר בדיוק באותו מקום.","מספיק לבדוק את המראות לפני היציאה.","נדרשת בדיקה נוספת רק אם ההפסקה הייתה ארוכה מחצי שעה.","יש לבדוק מחדש את סביבת הטאג לפני תחילת התנועה."], correct:3},
+    {q:"מתחת למנוף האונייה (STS), אתת הרציף מסמן לנהג לצאת, אך הנהג רואה שנתיב היציאה עדיין אינו פנוי לחלוטין. מה עליו לעשות?",
+     opts:["להתחיל לצאת באיטיות מכיוון שהאתת כבר נתן אישור.","להישאר במקום עד שנתיב היציאה בטוח ופנוי.","להתקדם עד קצה אזור העבודה ואז לעצור.","לצאת בהתאם לסימון האתת ולצפות שהכלים האחרים יפנו את הדרך."], correct:1},
+    {q:"הנהג מתקרב למעבר צר. נראה שהטאג עצמו יכול לעבור, אך הנהג אינו בטוח שיש מספיק מרווח לעגלה. מה נכון לעשות?",
+     opts:["להיכנס לאט ולבדוק את המראות תוך כדי התקדמות.","להיכנס אם תא הנהג עובר ללא בעיה.","לעצור ולא להיכנס עד שיש ודאות שיש מרווח בטוח לכל הרכב, או עד לקבלת סיוע.","להיכנס עד אמצע המעבר ואז להחליט אם ניתן להמשיך."], correct:2},
+    {q:"העבודה מתחת למנוף האונייה (STS) הסתיימה ואתת הרציף הזיז את הקונוס. בגלל זווית הראייה הנהג אינו מצליח לראות בבירור את מצב המכולה והספרדר. מה עליו לעשות?",
+     opts:["להישאר במקום עד שיש ודאות שהמצב בטוח ולא להתחיל תנועה מתוך ספק.","להתחיל לצאת משום שהאתת כבר הזיז את הקונוס.","להתקדם באיטיות עד שתהיה לנהג זווית ראייה טובה יותר.","לצאת אם הטאג שהיה לפניו פעל באותה צורה."], correct:0},
+    {q:"הנהג נתקל במצב שאינו מופיע בדיוק בהדרכה ואינו בטוח כיצד לפעול. העבודה מתעכבת וכלים אחרים ממתינים. מה נכון לעשות?",
+     opts:["לבחור בפעולה שנראית לנהג הבטוחה ביותר ולהמשיך.","לפעול כפי שנהג מנוסה אחר היה פועל במצב דומה.","לבצע תנועה קטנה ולבדוק אם ניתן להמשיך בבטחה.","לעצור ולפנות לגורם האחראי המתאים לקבלת הנחיה לפני ביצוע פעולה."], correct:3}
+  ];
+
+  var NUM_Q = QUESTIONS_HE.length;
+
+  // ---------------------------------------------------------------
+  // Translations — UI strings + question text per language.
+  // Question option ORDER matches QUESTIONS_HE exactly in every
+  // language, so QUESTIONS_HE[i].correct is the right index everywhere.
+  // ---------------------------------------------------------------
+  var T = {
+
+    he: { dir:'rtl', letters:['א','ב','ג','ד'],
+      ui:{
+        headerTitle:"מבחן בטיחות – נהגי טאג",
+        labelFirst:"שם פרטי", labelLast:"שם משפחה", labelEmail:"אימייל",
+        labelId:"תעודת זהות", labelEmpNum:"מספר עובד", labelDate:"תאריך",
+        errFirst:"יש להזין שם פרטי (לפחות 2 אותיות, טקסט בלבד)", errLast:"יש להזין שם משפחה (לפחות 2 אותיות, טקסט בלבד)",
+        errEmail:"יש להזין כתובת אימייל תקינה", errId:"יש להזין מספר תעודת זהות ישראלי או סיני תקין",
+        errEmpNum:"מספר עובד חייב להיות בן 4 ספרות", errDate:"יש לבחור תאריך",
+        detailsAlert:"יש למלא את כל השדות המסומנים לפני שממשיכים למבחן.",
+        btnToQuiz:"עבור למבחן",
+        questionOf:function(n,t){return "שאלה "+n+" מתוך "+t;},
+        progressOf:function(n,t){return "ענית על "+n+" מתוך "+t+" שאלות";},
+        quizAlertMissing:function(n){return "נשארו "+n+" שאלות ללא תשובה. יש לענות על כל השאלות לפני הסיום.";},
+        btnFinish:"סיום המבחן",
+        scoreSub:"מתוך 100",
+        resultTitlePass:"עברת את המבחן", resultTitleFail:"לא עברת את המבחן",
+        resultDescPass:function(c,t,p){return "ענית נכון על "+c+" מתוך "+t+" שאלות. ציון עובר: "+p+".";},
+        resultDescFail:function(c,t,p){return "ענית נכון על "+c+" מתוך "+t+" שאלות. ציון עובר: "+p+". מומלץ לעבור על החומר שוב.";},
+        summaryName:"שם", summaryId:"ת.ז.", summaryEmpNum:"מס׳ עובד", summaryDate:"תאריך",
+        btnPdf:"📄 הורדת קובץ PDF עם התוצאה המלאה", btnPdfPreparing:"מכין קובץ...",
+        emailStepTitle:"שלב אחרון – שליחת התוצאה",
+        emailStepDesc:"הקובץ שהורדת נמצא כעת בתיקיית ההורדות במכשיר שלך. לחצו על הכפתור למטה כדי לפתוח מייל מוכן מראש, צרפו את קובץ ה-PDF שהורדתם ולחצו שליחה.",
+        btnMailto:"✉️ פתיחת מייל לשליחת התוצאה",
+        submitSending:"שולח את התוצאה אוטומטית...",
+        submitSuccess:"התוצאה נשלחה בהצלחה במייל.",
+        submitError:"אירעה שגיאה בשליחה האוטומטית של התוצאה. ניתן להוריד את קובץ ה-PDF ולשלוח אותו ידנית באמצעות הכפתור למטה."
+      },
+      questions: QUESTIONS_HE
+    },
+
+    en: { dir:'ltr', letters:['A','B','C','D'],
+      ui:{
+        headerTitle:"Safety Exam – Terminal Tractor Drivers",
+        labelFirst:"First name", labelLast:"Last name", labelEmail:"Email",
+        labelId:"ID number", labelEmpNum:"Employee number", labelDate:"Date",
+        errFirst:"Please enter a first name (letters only, at least 2 characters)", errLast:"Please enter a last name (letters only, at least 2 characters)",
+        errEmail:"Please enter a valid email address", errId:"Please enter a valid Israeli or Chinese ID number",
+        errEmpNum:"Employee number must be exactly 4 digits", errDate:"Please select a date",
+        detailsAlert:"Please fill in all the highlighted fields before continuing to the exam.",
+        btnToQuiz:"Continue to exam",
+        questionOf:function(n,t){return "Question "+n+" of "+t;},
+        progressOf:function(n,t){return "Answered "+n+" of "+t+" questions";},
+        quizAlertMissing:function(n){return n+" question"+(n===1?"":"s")+" still unanswered. Please answer all questions before finishing.";},
+        btnFinish:"Finish exam",
+        scoreSub:"out of 100",
+        resultTitlePass:"You passed the exam", resultTitleFail:"You did not pass the exam",
+        resultDescPass:function(c,t,p){return "You answered "+c+" out of "+t+" questions correctly. Passing score: "+p+".";},
+        resultDescFail:function(c,t,p){return "You answered "+c+" out of "+t+" questions correctly. Passing score: "+p+". We recommend reviewing the material again.";},
+        summaryName:"Name", summaryId:"ID number", summaryEmpNum:"Employee #", summaryDate:"Date",
+        btnPdf:"📄 Download PDF with full result", btnPdfPreparing:"Preparing file...",
+        emailStepTitle:"Last step – send the result",
+        emailStepDesc:"The file you downloaded is now in your device's downloads folder. Click the button below to open a pre-filled email, attach the PDF you downloaded, and click send.",
+        btnMailto:"✉️ Open email to send the result",
+        submitSending:"Sending the result automatically...",
+        submitSuccess:"The result was sent successfully by email.",
+        submitError:"An error occurred while sending the result automatically. You can download the PDF file and send it manually using the button below."
+      },
+      questions:[
+        {q:"Loading has finished under the ship crane (STS). The quay signalman moved the cone and signaled you to exit. What must you make sure of before starting to drive?",
+         opts:["That the path is clear, and then you can exit according to the signalman's signal.","That the container is placed on the chassis, the spreader is fully disconnected and raised to a safe height, and that the path is clear.","That the spreader has started to rise, and then you can start to exit slowly.","That the signalman keeps eye contact with the driver while exiting."]},
+        {q:"Unloading is being carried out from the truck (tag) to the ship under the ship crane (STS). When is it allowed to start exiting?",
+         opts:["As soon as the spreader locks onto the container and the signalman signals to exit.","As soon as the container starts to lift and the path looks clear.","Only after the container has been fully lifted off the chassis, moved away from the truck, and reached a safe height for exiting.","Immediately after the signalman moves the cone and there is no additional truck ahead."]},
+        {q:"Unloading is being carried out from the truck to the block using the yard crane (ARMG). The exit light allows driving, but the container is still above the truck and has not yet entered the block. What should you do?",
+         opts:["Stay in place until the container has entered the block and there is no load hanging over the truck or the exit path.","Exit because the exit light already allows driving.","Start exiting slowly while the container continues to rise.","Exit as long as no siren is heard from the crane."]},
+        {q:"Loading is being carried out from the block to the truck using the yard crane (ARMG). The container is already placed on the chassis and the exit light allows driving, but the spreader is still connected. What should you do?",
+         opts:["Start exiting slowly because the container is already placed on the chassis.","Wait a few seconds and exit if the light still allows it.","Start exiting as long as the spreader is not applying pressure on the container.","Wait until the spreader is fully disconnected and raised to a safe height, and only after the path is clear, exit."]},
+        {q:"A driver is traveling at 28 km/h and approaching a busy area under the ship crane (STS). There is no vehicle blocking ahead. What is correct?",
+         opts:["It is possible to continue at 28 km/h since the permitted speed is up to 30 km/h.","Speed must be adapted to the conditions of the area even if it is significantly lower than 30 km/h.","Slow down only if the signalman or shift manager requests it.","It is possible to continue at the current speed if the truck is driving without a container."]},
+        {q:"A reverse movement of only about three meters is required. The driver got out of the truck, checked that no one is behind, and returned to the cab. No spotter is available. What is correct to do?",
+         opts:["Perform the reverse movement slowly since the area was checked in advance.","Perform the movement using the mirrors and the open window.","Do not perform a reverse movement until a spotter or the required assistance is obtained.","It is possible to perform the movement if the truck is driving without a chassis."]},
+        {q:"A driver needs to disconnect a chassis. The shift manager is in the area but currently busy with another task. What is correct to do?",
+         opts:["Wait and perform the disconnection only in the presence or under the supervision of the shift manager.","Start the disconnection and wait for the shift manager only before starting to drive.","Ask another experienced driver to supervise the disconnection.","Lower the chassis legs and disconnect the air hoses, but do not move the truck."]},
+        {q:"After disconnecting a chassis, the chassis legs have already been lowered and it is standing stably. What must be checked before starting to drive?",
+         opts:["That the chassis legs are stable and the path ahead is clear.","That the truck is straight and the connection to the chassis looks loosened.","That there is no other vehicle near the chassis.","That all relevant connections have been disconnected, including air hoses and cables, and that the chassis is secured as required."]},
+        {q:"During a container flip using a reach stacker, the driver enters the position according to the instructions but the truck is not well aligned. After a small correction attempt, the driver is still unsure of the position. What should he do?",
+         opts:["Leave the area and return in reverse to try to realign.","Stop and call the team leader or shift manager for guidance.","Continue making small corrections until the truck is aligned.","Ask the reach stacker operator to guide him using horn signals."]},
+        {q:"During work with a reach stacker, the operator sounds one horn signal. The driver does not see a clear danger. What should he do?",
+         opts:["Slow down and continue carefully.","Stop only if another horn signal is heard.","Stop immediately and wait until it is possible to continue safely.","Continue as long as the container is not in the air."]},
+        {q:"The driving path is blocked and additional trucks are waiting behind. It is possible to make a U-turn in a place not designated for it and thus save time. What should you do?",
+         opts:["Stop and contact the shift manager for instructions, and do not perform a prohibited maneuver.","Perform the U-turn carefully since the path is blocked.","Perform the U-turn if another worker is guiding the driver.","It is possible to perform the maneuver if the chassis is empty."]},
+        {q:"A driver receives a truck in the middle of a shift. The previous driver performed a full checklist about an hour ago and everything was fine. What is correct to do?",
+         opts:["Check only if new damage has occurred since the previous check.","Rely on the previous checklist if it is signed and complete.","Perform a new checklist only if the driver identifies a fault.","Perform a new checklist because there was a truck or driver change."]},
+        {q:"There is a suspended load over the driving path, but there appears to be enough clearance to pass underneath it. What is correct to do?",
+         opts:["Pass slowly if the load is at a sufficient height.","Wait until there is no load suspended over the truck or over the driving path.","In the yard crane area, it is possible to pass if the exit light allows driving.","Advance to the edge of the area and wait there."]},
+        {q:"A driver needs to get out of the truck for a short time. He puts on safety shoes and a high-visibility vest, but the helmet is somewhere else. What is correct to do?",
+         opts:["It is possible to get out since the driver stays close to the truck.","It is possible to get out if there is currently no crane activity in the area.","Do not get out of the truck until the driver is equipped with all required protective equipment.","It is possible to get out if the shift manager knows about it."]},
+        {q:"During slow driving in an open area, a work-related message is received on the phone. There is currently no traffic around. What is correct to do?",
+         opts:["Stop in a safe place and use the phone only when the truck is not moving.","It is possible to read the message only, as long as you don't type.","It is possible to use the phone if the driving speed is very low.","It is possible to glance quickly if the path is clear."]},
+        {q:"The driver returns from a break to the same truck he used before. No other driver used the truck during the break. What is correct to do before starting to drive?",
+         opts:["It is possible to start driving if the truck remained in exactly the same place.","It is enough to check the mirrors before exiting.","An additional check is required only if the break was longer than half an hour.","The area around the truck must be checked again before starting movement."]},
+        {q:"Under the ship crane (STS), the quay signalman signals the driver to exit, but the driver sees that the exit path is not yet completely clear. What should he do?",
+         opts:["Start exiting slowly since the signalman has already given approval.","Stay in place until the exit path is safe and clear.","Advance to the edge of the work area and then stop.","Exit according to the signalman's signal and expect the other equipment to clear the way."]},
+        {q:"The driver is approaching a narrow passage. It seems the truck itself can pass, but the driver is not sure there is enough clearance for the chassis. What is correct to do?",
+         opts:["Enter slowly and check the mirrors while proceeding.","Enter if the cab passes without a problem.","Stop and do not enter until there is certainty that there is safe clearance for the entire vehicle, or until assistance is obtained.","Enter halfway through the passage and then decide whether to continue."]},
+        {q:"Work under the ship crane (STS) has ended and the quay signalman moved the cone. Due to the viewing angle, the driver cannot clearly see the state of the container and spreader. What should he do?",
+         opts:["Stay in place until there is certainty that the situation is safe, and not start moving out of doubt.","Start exiting because the signalman has already moved the cone.","Advance slowly until the driver has a better viewing angle.","Exit if the truck ahead of him acted the same way."]},
+        {q:"The driver encounters a situation that does not appear exactly in the training and is unsure how to act. Work is being delayed and other equipment is waiting. What is correct to do?",
+         opts:["Choose the action that seems safest to the driver and continue.","Act as another experienced driver would act in a similar situation.","Make a small movement and check if it is possible to continue safely.","Stop and contact the appropriate responsible person for guidance before performing any action."]}
+      ]
+    },
+
+    ar: { dir:'rtl', letters:['أ','ب','ج','د'],
+      ui:{
+        headerTitle:"اختبار السلامة – سائقو الشاحنات الداخلية (تاغ)",
+        labelFirst:"الاسم الأول", labelLast:"اسم العائلة", labelEmail:"البريد الإلكتروني",
+        labelId:"رقم الهوية", labelEmpNum:"الرقم الوظيفي", labelDate:"التاريخ",
+        errFirst:"الرجاء إدخال الاسم الأول (حروف فقط، حرفان على الأقل)", errLast:"الرجاء إدخال اسم العائلة (حروف فقط، حرفان على الأقل)",
+        errEmail:"الرجاء إدخال عنوان بريد إلكتروني صحيح", errId:"الرجاء إدخال رقم هوية إسرائيلي أو صيني صحيح",
+        errEmpNum:"يجب أن يتكون الرقم الوظيفي من 4 أرقام بالضبط", errDate:"الرجاء اختيار التاريخ",
+        detailsAlert:"يرجى تعبئة جميع الحقول المميزة قبل المتابعة إلى الاختبار.",
+        btnToQuiz:"الانتقال إلى الاختبار",
+        questionOf:function(n,t){return "السؤال "+n+" من "+t;},
+        progressOf:function(n,t){return "تمت الإجابة على "+n+" من "+t+" أسئلة";},
+        quizAlertMissing:function(n){return "تبقّى "+n+" أسئلة بدون إجابة. يرجى الإجابة على جميع الأسئلة قبل الإنهاء.";},
+        btnFinish:"إنهاء الاختبار",
+        scoreSub:"من 100",
+        resultTitlePass:"لقد اجتزت الاختبار", resultTitleFail:"لم تجتز الاختبار",
+        resultDescPass:function(c,t,p){return "أجبت بشكل صحيح على "+c+" من "+t+" أسئلة. علامة النجاح: "+p+".";},
+        resultDescFail:function(c,t,p){return "أجبت بشكل صحيح على "+c+" من "+t+" أسئلة. علامة النجاح: "+p+". يُنصح بمراجعة المادة مرة أخرى.";},
+        summaryName:"الاسم", summaryId:"رقم الهوية", summaryEmpNum:"الرقم الوظيفي", summaryDate:"التاريخ",
+        btnPdf:"📄 تحميل ملف PDF بالنتيجة الكاملة", btnPdfPreparing:"جارٍ إعداد الملف...",
+        emailStepTitle:"الخطوة الأخيرة – إرسال النتيجة",
+        emailStepDesc:"الملف الذي حمّلته موجود الآن في مجلد التنزيلات في جهازك. اضغط على الزر أدناه لفتح بريد إلكتروني معبأ مسبقًا، أرفق ملف PDF الذي حمّلته، واضغط إرسال.",
+        btnMailto:"✉️ فتح البريد الإلكتروني لإرسال النتيجة",
+        submitSending:"جارٍ إرسال النتيجة تلقائيًا...",
+        submitSuccess:"تم إرسال النتيجة بنجاح عبر البريد الإلكتروني.",
+        submitError:"حدث خطأ أثناء الإرسال التلقائي للنتيجة. يمكنك تنزيل ملف PDF وإرساله يدويًا باستخدام الزر أدناه."
+      },
+      questions:[
+        {q:"انتهى التحميل أسفل رافعة السفينة (STS). قام مشير الرصيف بتحريك المخروط وأشار لك بالخروج. ما الذي يجب عليك التأكد منه قبل بدء القيادة؟",
+         opts:["أن الطريق خالٍ، وعندها يمكن الخروج حسب إشارة المشير.","أن الحاوية موضوعة على الشاصي، وأن الناشر (Spreader) منفصل تمامًا ومرفوع لارتفاع آمن، وأن الطريق خالٍ.","أن الناشر بدأ بالارتفاع، وعندها يمكن البدء بالخروج ببطء.","أن المشير يبقى على تواصل بصري مع السائق أثناء الخروج."]},
+        {q:"يجري تفريغ من الشاحنة (تاغ) إلى السفينة أسفل رافعة السفينة (STS). متى يُسمح بالبدء بالخروج؟",
+         opts:["بمجرد أن يُقفل الناشر على الحاوية ويُشير المشير بالخروج.","بمجرد أن تبدأ الحاوية بالارتفاع ويبدو الطريق خاليًا.","فقط بعد أن تُرفع الحاوية بالكامل عن الشاصي، وتبتعد عن الشاحنة، وتصل لارتفاع آمن للخروج.","مباشرة بعد أن يحرك المشير المخروط ولا توجد شاحنة أخرى أمامها."]},
+        {q:"يجري تفريغ من الشاحنة إلى الكتلة (Block) باستخدام رافعة الساحة (ARMG). إشارة الخروج تسمح بالقيادة، لكن الحاوية ما زالت فوق الشاحنة ولم تدخل الكتلة بعد. ماذا تفعل؟",
+         opts:["البقاء في المكان حتى تدخل الحاوية إلى الكتلة ولا يكون هناك حمل معلق فوق الشاحنة أو مسار الخروج.","الخروج لأن إشارة الخروج تسمح بالقيادة بالفعل.","البدء بالخروج ببطء بينما الحاوية ما زالت ترتفع.","الخروج طالما لم يُسمع بوق من الرافعة."]},
+        {q:"يجري تحميل من الكتلة إلى الشاحنة باستخدام رافعة الساحة (ARMG). الحاوية موضوعة بالفعل على الشاصي وإشارة الخروج تسمح بالقيادة، لكن الناشر ما زال متصلاً. ماذا تفعل؟",
+         opts:["البدء بالخروج ببطء لأن الحاوية موضوعة بالفعل على الشاصي.","الانتظار بضع ثوانٍ والخروج إذا كانت الإشارة ما زالت تسمح بذلك.","البدء بالخروج طالما أن الناشر لا يضغط على الحاوية.","الانتظار حتى يُفصل الناشر تمامًا ويُرفع لارتفاع آمن، والخروج فقط بعد أن يكون الطريق خاليًا."]},
+        {q:"سائق يقود بسرعة 28 كم/س ويقترب من منطقة مزدحمة أسفل رافعة السفينة (STS). لا توجد مركبة أمامه تعيقه. ما الصحيح؟",
+         opts:["يمكن الاستمرار بسرعة 28 كم/س لأن السرعة المسموحة تصل إلى 30 كم/س.","يجب تكييف السرعة مع ظروف المنطقة حتى لو كانت أقل بكثير من 30 كم/س.","يجب الإبطاء فقط إذا طلب المشير أو مدير المناوبة ذلك.","يمكن الاستمرار بنفس السرعة إذا كانت الشاحنة تسير بدون حاوية."]},
+        {q:"مطلوب التراجع للخلف لمسافة نحو ثلاثة أمتار فقط. نزل السائق من الشاحنة، تحقق من عدم وجود أحد خلفها، وعاد إلى المقصورة. لا يوجد موجّه (Spotter) متاح. ما الصحيح؟",
+         opts:["تنفيذ التراجع ببطء لأن المنطقة فُحصت مسبقًا.","تنفيذ التراجع باستخدام المرايا والنافذة المفتوحة.","عدم التراجع إلى الخلف حتى يتوفر موجّه أو المساعدة المطلوبة.","يمكن تنفيذ الحركة إذا كانت الشاحنة تسير بدون شاصي."]},
+        {q:"يحتاج السائق إلى فصل شاصي. مدير المناوبة موجود في المنطقة لكنه مشغول حاليًا بمهمة أخرى. ما الصحيح؟",
+         opts:["الانتظار وتنفيذ الفصل فقط بحضور أو إشراف مدير المناوبة.","البدء بالفصل والانتظار لمدير المناوبة فقط قبل بدء القيادة.","طلب من سائق آخر ذي خبرة الإشراف على الفصل.","إنزال أرجل الشاصي وفصل خراطيم الهواء، لكن دون تحريك الشاحنة."]},
+        {q:"بعد فصل الشاصي، تم إنزال أرجل الشاصي بالفعل وهو واقف بثبات. ما الذي يجب فحصه قبل بدء القيادة؟",
+         opts:["أن أرجل الشاصي ثابتة وأن الطريق أمامك خالٍ.","أن الشاحنة مستقيمة وأن الاتصال بالشاصي يبدو مفكوكًا.","عدم وجود مركبة أخرى بالقرب من الشاصي.","أن جميع الوصلات ذات الصلة قد فُصلت، بما في ذلك خراطيم الهواء والكابلات، وأن الشاصي مؤمّن كما هو مطلوب."]},
+        {q:"أثناء قلب حاوية باستخدام الريتش ستاكر (Reach Stacker)، دخل السائق إلى الموقع حسب التعليمات لكن الشاحنة غير مُحاذاة جيدًا. بعد محاولة تصحيح صغيرة، لا يزال السائق غير متأكد من الموقع. ماذا يجب عليه أن يفعل؟",
+         opts:["الخروج من المنطقة والعودة للخلف لمحاولة إعادة المحاذاة.","التوقف والاتصال برئيس الفريق أو مدير المناوبة للحصول على التوجيه.","الاستمرار في إجراء تصحيحات صغيرة حتى تتم محاذاة الشاحنة.","طلب من مشغل الريتش ستاكر توجيهه باستخدام إشارات البوق."]},
+        {q:"أثناء العمل مع الريتش ستاكر، يُصدر المشغل إشارة بوق واحدة. لا يرى السائق خطرًا واضحًا. ماذا يجب عليه أن يفعل؟",
+         opts:["الإبطاء والاستمرار بحذر.","التوقف فقط إذا سُمعت إشارة بوق إضافية.","التوقف فورًا والانتظار حتى يمكن المتابعة بأمان.","الاستمرار طالما أن الحاوية ليست معلقة في الهواء."]},
+        {q:"مسار القيادة مغلق وشاحنات أخرى تنتظر خلف. يمكن إجراء دورة كاملة (يو-تيرن) في مكان غير مخصص لذلك لتوفير الوقت. ماذا تفعل؟",
+         opts:["التوقف والتواصل مع مدير المناوبة للحصول على تعليمات، وعدم تنفيذ مناورة ممنوعة.","تنفيذ دورة اليو-تيرن بحذر لأن المسار مغلق.","تنفيذ الدورة إذا كان عامل آخر يوجّه السائق.","يمكن تنفيذ المناورة إذا كان الشاصي فارغًا."]},
+        {q:"يستلم سائق شاحنة في منتصف المناوبة. السائق السابق أجرى قائمة فحص كاملة قبل نحو ساعة وكان كل شيء سليمًا. ما الصحيح؟",
+         opts:["الفحص فقط إذا حدث ضرر جديد منذ الفحص السابق.","الاعتماد على قائمة الفحص السابقة إذا كانت موقّعة وكاملة.","إجراء قائمة فحص جديدة فقط إذا لاحظ السائق عطلاً.","إجراء قائمة فحص جديدة لأنه تم تبديل الشاحنة أو السائق."]},
+        {q:"يوجد حمل معلّق فوق مسار القيادة، لكن يبدو أن هناك مساحة كافية للمرور تحته. ما الصحيح؟",
+         opts:["المرور ببطء إذا كان الحمل على ارتفاع كافٍ.","الانتظار حتى لا يكون هناك حمل معلّق فوق الشاحنة أو فوق مسار القيادة.","في منطقة رافعة الساحة، يمكن المرور إذا كانت إشارة الخروج تسمح بالقيادة.","التقدم حتى حافة المنطقة والانتظار هناك."]},
+        {q:"يحتاج السائق للخروج من الشاحنة لفترة قصيرة. ارتدى حذاء الأمان وسترة عاكسة، لكن الخوذة موجودة في مكان آخر. ما الصحيح؟",
+         opts:["يمكن الخروج لأن السائق يبقى قريبًا من الشاحنة.","يمكن الخروج إذا لم يكن هناك حاليًا نشاط رافعة في المنطقة.","لا يجوز الخروج من الشاحنة حتى يكون السائق مزودًا بكامل معدات الحماية المطلوبة.","يمكن الخروج إذا كان مدير المناوبة على علم بذلك."]},
+        {q:"أثناء القيادة البطيئة في منطقة مفتوحة، وردت رسالة على الهاتف متعلقة بالعمل. لا توجد حركة مرور حاليًا حول السائق. ما الصحيح؟",
+         opts:["التوقف في مكان آمن واستخدام الهاتف فقط عندما لا تكون الشاحنة في حركة.","يمكن قراءة الرسالة فقط، طالما لا يتم الكتابة.","يمكن استخدام الهاتف إذا كانت سرعة القيادة منخفضة جدًا.","يمكن إلقاء نظرة سريعة إذا كان الطريق خاليًا."]},
+        {q:"يعود السائق من الاستراحة إلى نفس الشاحنة التي استخدمها سابقًا. لم يستخدم أي سائق آخر الشاحنة أثناء الاستراحة. ما الصحيح قبل بدء القيادة؟",
+         opts:["يمكن البدء بالقيادة إذا بقيت الشاحنة في نفس المكان تمامًا.","يكفي فحص المرايا قبل الخروج.","يلزم فحص إضافي فقط إذا كانت الاستراحة أطول من نصف ساعة.","يجب فحص محيط الشاحنة مرة أخرى قبل بدء الحركة."]},
+        {q:"أسفل رافعة السفينة (STS)، يُشير مشير الرصيف للسائق بالخروج، لكن السائق يرى أن مسار الخروج ليس خاليًا تمامًا بعد. ماذا يجب عليه أن يفعل؟",
+         opts:["البدء بالخروج ببطء لأن المشير أعطى الموافقة بالفعل.","البقاء في المكان حتى يكون مسار الخروج آمنًا وخاليًا.","التقدم حتى حافة منطقة العمل ثم التوقف.","الخروج حسب إشارة المشير وتوقّع أن تُخلي المعدات الأخرى الطريق."]},
+        {q:"يقترب السائق من ممر ضيق. يبدو أن الشاحنة نفسها يمكن أن تمر، لكن السائق غير متأكد من وجود مساحة كافية للشاصي. ما الصحيح؟",
+         opts:["الدخول ببطء وفحص المرايا أثناء التقدم.","الدخول إذا مرت مقصورة القيادة دون مشكلة.","التوقف وعدم الدخول حتى التأكد من وجود مساحة آمنة كافية للمركبة بأكملها، أو حتى الحصول على مساعدة.","الدخول حتى منتصف الممر ثم قرر هل يمكن المتابعة."]},
+        {q:"انتهى العمل أسفل رافعة السفينة (STS) وقام مشير الرصيف بتحريك المخروط. بسبب زاوية الرؤية، لا يستطيع السائق أن يرى بوضوح حالة الحاوية والناشر. ماذا يجب عليه أن يفعل؟",
+         opts:["البقاء في المكان حتى يتأكد من أن الوضع آمن، وعدم بدء الحركة من باب الشك.","البدء بالخروج لأن المشير حرّك المخروط بالفعل.","التقدم ببطء حتى تصبح لدى السائق زاوية رؤية أفضل.","الخروج إذا تصرفت الشاحنة التي كانت أمامه بنفس الطريقة."]},
+        {q:"يواجه السائق موقفًا لا يظهر بالضبط في التدريب وهو غير متأكد من كيفية التصرف. العمل يتأخر ومعدات أخرى تنتظر. ما الصحيح؟",
+         opts:["اختيار الإجراء الذي يبدو للسائق الأكثر أمانًا والمتابعة.","التصرف كما كان سيتصرف سائق آخر ذو خبرة في موقف مشابه.","القيام بحركة صغيرة وفحص إمكانية المتابعة بأمان.","التوقف والتواصل مع الجهة المسؤولة المناسبة للحصول على توجيه قبل تنفيذ أي إجراء."]}
+      ]
+    },
+
+    ru: { dir:'ltr', letters:['А','Б','В','Г'],
+      ui:{
+        headerTitle:"Экзамен по технике безопасности – водители тягачей",
+        labelFirst:"Имя", labelLast:"Фамилия", labelEmail:"Электронная почта",
+        labelId:"Номер удостоверения", labelEmpNum:"Табельный номер", labelDate:"Дата",
+        errFirst:"Введите имя (только буквы, не менее 2 символов)", errLast:"Введите фамилию (только буквы, не менее 2 символов)",
+        errEmail:"Пожалуйста, введите корректный адрес электронной почты", errId:"Введите корректный номер удостоверения (израильский или китайский)",
+        errEmpNum:"Табельный номер должен состоять ровно из 4 цифр", errDate:"Пожалуйста, выберите дату",
+        detailsAlert:"Пожалуйста, заполните все выделенные поля, прежде чем перейти к экзамену.",
+        btnToQuiz:"Перейти к экзамену",
+        questionOf:function(n,t){return "Вопрос "+n+" из "+t;},
+        progressOf:function(n,t){return "Отвечено на "+n+" из "+t+" вопросов";},
+        quizAlertMissing:function(n){return "Осталось "+n+" вопросов без ответа. Пожалуйста, ответьте на все вопросы перед завершением.";},
+        btnFinish:"Завершить экзамен",
+        scoreSub:"из 100",
+        resultTitlePass:"Вы сдали экзамен", resultTitleFail:"Вы не сдали экзамен",
+        resultDescPass:function(c,t,p){return "Вы правильно ответили на "+c+" из "+t+" вопросов. Проходной балл: "+p+".";},
+        resultDescFail:function(c,t,p){return "Вы правильно ответили на "+c+" из "+t+" вопросов. Проходной балл: "+p+". Рекомендуем повторить материал.";},
+        summaryName:"Имя", summaryId:"Удостоверение", summaryEmpNum:"Таб. №", summaryDate:"Дата",
+        btnPdf:"📄 Скачать PDF с полным результатом", btnPdfPreparing:"Подготовка файла...",
+        emailStepTitle:"Последний шаг – отправка результата",
+        emailStepDesc:"Скачанный файл теперь находится в папке загрузок вашего устройства. Нажмите кнопку ниже, чтобы открыть заранее заполненное письмо, прикрепите скачанный PDF и нажмите «отправить».",
+        btnMailto:"✉️ Открыть письмо для отправки результата",
+        submitSending:"Автоматическая отправка результата...",
+        submitSuccess:"Результат успешно отправлен по электронной почте.",
+        submitError:"Произошла ошибка при автоматической отправке результата. Вы можете скачать PDF-файл и отправить его вручную с помощью кнопки ниже."
+      },
+      questions:[
+        {q:"Погрузка под портальным краном (STS) завершена. Сигнальщик причала убрал конус и подал вам знак на выезд. Что вы должны проверить перед началом движения?",
+         opts:["Что путь свободен, и тогда можно выезжать по сигналу сигнальщика.","Что контейнер установлен на шасси, спредер полностью отсоединён и поднят на безопасную высоту, и что путь свободен.","Что спредер начал подниматься, и тогда можно начинать медленно выезжать.","Что сигнальщик поддерживает зрительный контакт с водителем во время выезда."]},
+        {q:"Производится разгрузка с тягача на судно под портальным краном (STS). Когда разрешено начинать выезд?",
+         opts:["Как только спредер зафиксирован на контейнере и сигнальщик подаёт сигнал на выезд.","Как только контейнер начинает подниматься и путь кажется свободным.","Только после того, как контейнер полностью поднят с шасси, отведён от тягача и достиг безопасной высоты для выезда.","Сразу после того, как сигнальщик убрал конус и впереди нет другого тягача."]},
+        {q:"Производится разгрузка с тягача в блок с помощью крана-штабелёра (ARMG). Светофор на выезде разрешает движение, но контейнер ещё находится над тягачом и ещё не вошёл в блок. Что делать?",
+         opts:["Оставаться на месте, пока контейнер не войдёт в блок и над тягачом или путём выезда не будет висящего груза.","Выезжать, поскольку светофор уже разрешает движение.","Начинать медленно выезжать, пока контейнер продолжает подниматься.","Выезжать, пока не слышен сигнал крана."]},
+        {q:"Производится погрузка из блока на тягач с помощью крана-штабелёра (ARMG). Контейнер уже установлен на шасси, светофор на выезде разрешает движение, но спредер всё ещё подключён. Что делать?",
+         opts:["Начинать медленно выезжать, поскольку контейнер уже установлен на шасси.","Подождать несколько секунд и выезжать, если светофор всё ещё разрешает.","Начинать выезжать, пока спредер не оказывает давления на контейнер.","Дождаться полного отсоединения спредера и его подъёма на безопасную высоту, и только после того как путь свободен — выезжать."]},
+        {q:"Водитель движется со скоростью 28 км/ч и приближается к плотной зоне под портальным краном (STS). Впереди него нет техники, которая бы его блокировала. Что верно?",
+         opts:["Можно продолжать движение со скоростью 28 км/ч, поскольку разрешённая скорость — до 30 км/ч.","Скорость необходимо адаптировать к условиям местности, даже если она будет значительно ниже 30 км/ч.","Снижать скорость нужно только если этого просит сигнальщик или сменный руководитель.","Можно продолжать движение с текущей скоростью, если тягач едет без контейнера."]},
+        {q:"Требуется движение задним ходом всего на около трёх метров. Водитель вышел из тягача, проверил, что сзади никого нет, и вернулся в кабину. Наблюдатель (спотер) недоступен. Что правильно сделать?",
+         opts:["Выполнить движение задним ходом медленно, поскольку территория была проверена заранее.","Выполнить движение, используя зеркала и открытое окно.","Не выполнять движение задним ходом до получения наблюдателя или необходимой помощи.","Можно выполнить движение, если тягач едет без прицепа (шасси)."]},
+        {q:"Водителю нужно отсоединить шасси. Сменный руководитель находится в зоне, но сейчас занят другой задачей. Что правильно сделать?",
+         opts:["Подождать и выполнить отсоединение только в присутствии или под наблюдением сменного руководителя.","Начать отсоединение и подождать сменного руководителя только перед началом движения.","Попросить другого опытного водителя наблюдать за отсоединением.","Опустить опоры шасси и отсоединить воздушные шланги, но не трогать тягач с места."]},
+        {q:"После отсоединения шасси его опоры уже опущены, и оно стоит устойчиво. Что нужно проверить перед началом движения?",
+         opts:["Что опоры шасси устойчивы и путь впереди свободен.","Что тягач стоит прямо и соединение с шасси выглядит ослабленным.","Что рядом с шасси нет других транспортных средств.","Что все соответствующие соединения отсоединены, включая воздушные шланги и кабели, и что шасси надёжно закреплено, как требуется."]},
+        {q:"Во время переворота контейнера с помощью ричстакера водитель заезжает на позицию согласно инструкции, но тягач выровнен неточно. После небольшой попытки коррекции водитель всё ещё не уверен в позиции. Что ему делать?",
+         opts:["Выехать из зоны и вернуться задним ходом, чтобы попытаться выровняться заново.","Остановиться и вызвать бригадира или сменного руководителя для указаний.","Продолжать делать небольшие коррекции, пока тягач не выровняется.","Попросить оператора ричстакера направлять его с помощью сигналов гудка."]},
+        {q:"Во время работы с ричстакером оператор подаёт один сигнал гудком. Водитель не видит явной опасности. Что ему делать?",
+         opts:["Снизить скорость и продолжать осторожно.","Остановиться, только если прозвучит ещё один сигнал.","Немедленно остановиться и ждать, пока можно будет безопасно продолжить.","Продолжать движение, пока контейнер не находится в воздухе."]},
+        {q:"Путь движения перекрыт, и другие тягачи ждут сзади. Можно выполнить разворот в месте, не предназначенном для этого, и таким образом сэкономить время. Что делать?",
+         opts:["Остановиться и обратиться к сменному руководителю за указаниями, не выполняя запрещённый манёвр.","Выполнить разворот осторожно, поскольку путь перекрыт.","Выполнить разворот, если другой работник направляет водителя.","Манёвр можно выполнить, если шасси пустое."]},
+        {q:"Водитель получает тягач в середине смены. Предыдущий водитель провёл полную проверку по чек-листу около часа назад, и всё было в порядке. Что правильно сделать?",
+         opts:["Проверить только, не возникло ли новое повреждение с момента предыдущей проверки.","Полагаться на предыдущий чек-лист, если он подписан и заполнен.","Проводить новую проверку по чек-листу только если водитель обнаружит неисправность.","Провести новую проверку по чек-листу, поскольку произошла замена тягача или водителя."]},
+        {q:"Над путём движения имеется подвешенный груз, но кажется, что зазора достаточно, чтобы проехать под ним. Что правильно сделать?",
+         opts:["Проехать медленно, если груз находится на достаточной высоте.","Подождать, пока над тягачом или над путём движения не останется подвешенного груза.","В зоне крана-штабелёра можно проехать, если светофор на выезде разрешает движение.","Продвинуться до края зоны и подождать там."]},
+        {q:"Водителю нужно ненадолго выйти из тягача. Он надел защитную обувь и светоотражающий жилет, но каска находится в другом месте. Что правильно сделать?",
+         opts:["Можно выйти, поскольку водитель остаётся рядом с тягачом.","Можно выйти, если в зоне сейчас нет работы крана.","Нельзя выходить из тягача, пока водитель не будет обеспечен всем необходимым защитным снаряжением.","Можно выйти, если сменный руководитель об этом знает."]},
+        {q:"Во время медленного движения на открытой территории на телефон приходит сообщение, связанное с работой. Движения вокруг сейчас нет. Что правильно сделать?",
+         opts:["Остановиться в безопасном месте и пользоваться телефоном только когда тягач не движется.","Можно только прочитать сообщение, если при этом не печатать.","Можно пользоваться телефоном, если скорость движения очень низкая.","Можно быстро взглянуть, если путь свободен."]},
+        {q:"Водитель возвращается с перерыва к тому же тягачу, которым пользовался ранее. Никакой другой водитель не пользовался тягачом во время перерыва. Что правильно сделать перед началом движения?",
+         opts:["Можно начинать движение, если тягач остался точно на том же месте.","Достаточно проверить зеркала перед выездом.","Дополнительная проверка требуется только если перерыв был длиннее получаса.","Необходимо заново проверить окружение тягача перед началом движения."]},
+        {q:"Под портальным краном (STS) сигнальщик причала подаёт водителю сигнал на выезд, но водитель видит, что путь выезда ещё не полностью свободен. Что ему делать?",
+         opts:["Начать медленно выезжать, поскольку сигнальщик уже дал разрешение.","Оставаться на месте, пока путь выезда не станет безопасным и свободным.","Продвинуться до края рабочей зоны и затем остановиться.","Выехать по сигналу сигнальщика и рассчитывать, что другая техника освободит путь."]},
+        {q:"Водитель приближается к узкому проезду. Кажется, что сам тягач может проехать, но водитель не уверен, что для шасси достаточно зазора. Что правильно сделать?",
+         opts:["Въезжать медленно и проверять зеркала по мере продвижения.","Въезжать, если кабина проходит без проблем.","Остановиться и не въезжать, пока нет уверенности, что для всего транспортного средства достаточно безопасного зазора, или пока не получена помощь.","Въехать до середины проезда, а затем решить, можно ли продолжить."]},
+        {q:"Работа под портальным краном (STS) завершена, и сигнальщик причала убрал конус. Из-за угла обзора водитель не может чётко видеть состояние контейнера и спредера. Что ему делать?",
+         opts:["Оставаться на месте, пока не будет уверенности, что ситуация безопасна, и не начинать движение из сомнения.","Начать выезд, поскольку сигнальщик уже убрал конус.","Медленно продвигаться, пока у водителя не появится лучший угол обзора.","Выехать, если тягач, находившийся перед ним, действовал так же."]},
+        {q:"Водитель сталкивается с ситуацией, которая точно не описана в инструктаже, и не уверен, как действовать. Работа задерживается, и другая техника ждёт. Что правильно сделать?",
+         opts:["Выбрать действие, которое кажется водителю наиболее безопасным, и продолжить.","Действовать так, как поступил бы другой опытный водитель в похожей ситуации.","Выполнить небольшое движение и проверить, можно ли безопасно продолжить.","Остановиться и обратиться к соответствующему ответственному лицу за указаниями, прежде чем выполнять какое-либо действие."]}
+      ]
+    },
+
+    zh: { dir:'ltr', letters:['A','B','C','D'],
+      ui:{
+        headerTitle:"安全考试 – 集卡司机",
+        labelFirst:"名字", labelLast:"姓氏", labelEmail:"电子邮箱",
+        labelId:"身份证号", labelEmpNum:"员工编号", labelDate:"日期",
+        errFirst:"请输入名字（仅限字母，至少2个字符）", errLast:"请输入姓氏（仅限字母，至少2个字符）",
+        errEmail:"请输入有效的电子邮箱地址", errId:"请输入有效的以色列或中国身份证号码",
+        errEmpNum:"员工编号必须为4位数字", errDate:"请选择日期",
+        detailsAlert:"请填写所有标记的字段后再继续考试。",
+        btnToQuiz:"前往考试",
+        questionOf:function(n,t){return "第 "+n+" 题，共 "+t+" 题";},
+        progressOf:function(n,t){return "已回答 "+n+" / "+t+" 题";},
+        quizAlertMissing:function(n){return "还有 "+n+" 道题未作答。请在结束前回答所有问题。";},
+        btnFinish:"结束考试",
+        scoreSub:"满分100",
+        resultTitlePass:"您通过了考试", resultTitleFail:"您未通过考试",
+        resultDescPass:function(c,t,p){return "您在 "+t+" 题中答对了 "+c+" 题。及格分数："+p+"。";},
+        resultDescFail:function(c,t,p){return "您在 "+t+" 题中答对了 "+c+" 题。及格分数："+p+"。建议重新复习相关内容。";},
+        summaryName:"姓名", summaryId:"身份证号", summaryEmpNum:"员工编号", summaryDate:"日期",
+        btnPdf:"📄 下载完整结果的PDF文件", btnPdfPreparing:"正在生成文件...",
+        emailStepTitle:"最后一步 – 发送结果",
+        emailStepDesc:"您下载的文件现在位于设备的下载文件夹中。点击下方按钮打开预先填写好的邮件，附上您下载的PDF文件，然后点击发送。",
+        btnMailto:"✉️ 打开邮件发送结果",
+        submitSending:"正在自动发送结果...",
+        submitSuccess:"结果已成功通过邮件发送。",
+        submitError:"自动发送结果时出错。您可以下载PDF文件，并使用下方按钮手动发送。"
+      },
+      questions:[
+        {q:"船吊（STS）下方的装货作业已完成。码头信号员移开了锥筒并示意你可以驶出。驶出前你必须确认什么？",
+         opts:["道路畅通，之后可按信号员的指示驶出。","集装箱已放置在底盘上，吊具已完全脱钩并升到安全高度，且道路畅通。","吊具已开始上升，之后可以缓慢开始驶出。","驶出时信号员与司机保持目视联系。"]},
+        {q:"正在船吊（STS）下方将集装箱从集卡卸到船上。什么时候允许开始驶出？",
+         opts:["吊具一锁定集装箱且信号员示意驶出时。","集装箱一开始起升、道路看起来畅通时。","只有在集装箱已完全从底盘上吊起、远离集卡并升到安全驶出高度之后。","信号员一移开锥筒且前方没有其他集卡时。"]},
+        {q:"正在使用场桥（ARMG）将集装箱从集卡卸到堆场（block）。驶出信号灯允许通行，但集装箱仍在集卡上方，尚未进入堆场。应该怎么做？",
+         opts:["留在原地，直到集装箱进入堆场，且集卡上方或驶出路线上没有悬吊的货物。","因为驶出信号灯已经允许通行，所以驶出。","在集装箱仍在上升时缓慢开始驶出。","只要场桥没有鸣笛就可以驶出。"]},
+        {q:"正在使用场桥（ARMG）将集装箱从堆场装到集卡上。集装箱已放置在底盘上，驶出信号灯允许通行，但吊具仍连接着。应该怎么做？",
+         opts:["因为集装箱已经放在底盘上，所以缓慢开始驶出。","等几秒钟，如果信号灯仍然允许，就驶出。","只要吊具没有对集装箱施加压力，就可以开始驶出。","等到吊具完全脱钩并升到安全高度，并且在道路畅通之后才驶出。"]},
+        {q:"司机以每小时28公里的速度行驶，正接近船吊（STS）下方的繁忙区域。前方没有车辆阻挡。以下哪项正确？",
+         opts:["因为允许的速度最高为每小时30公里，所以可以继续以28公里/小时行驶。","即使速度会明显低于每小时30公里，也必须根据现场情况调整速度。","只有在信号员或班组长要求时才需要减速。","如果集卡没有装载集装箱，可以继续保持现有速度。"]},
+        {q:"需要倒车约三米。司机下车检查了车后没有人，然后返回驾驶室。没有指挥人员（spotter）在场。应该怎么做？",
+         opts:["由于该区域已提前检查过，可以缓慢地倒车。","使用后视镜和打开的车窗完成倒车。","在获得指挥人员或所需协助之前，不进行倒车。","如果集卡没有挂底盘，可以进行该动作。"]},
+        {q:"司机需要摘挂底盘。班组长在现场，但目前正忙于其他任务。应该怎么做？",
+         opts:["等待，只有在班组长在场或监督下才进行摘挂作业。","开始摘挂作业，只在开车前等待班组长。","请另一位有经验的司机来监督摘挂作业。","放下底盘支腿并断开气管，但不要移动集卡。"]},
+        {q:"摘挂底盘后，底盘支腿已经放下，底盘稳定地立着。开车前需要检查什么？",
+         opts:["底盘支腿稳固，前方道路畅通。","集卡是直的，与底盘的连接看起来已松开。","底盘附近没有其他车辆。","所有相关连接都已断开，包括气管和电缆，且底盘已按要求固定好。"]},
+        {q:"在使用正面吊（reach stacker）进行集装箱翻转作业时，司机按照指示进入了位置，但集卡对位不准。经过小幅调整尝试后，司机仍不确定位置是否正确。他应该怎么做？",
+         opts:["驶离该区域，倒车尝试重新对位。","停下来，呼叫班组长或值班经理寻求指导。","继续进行小幅调整，直到集卡对位。","请正面吊操作员用鸣笛信号引导他。"]},
+        {q:"在与正面吊配合作业时，操作员鸣笛一次。司机没有发现明显的危险。他应该怎么做？",
+         opts:["减速并谨慎继续行驶。","只有再次听到鸣笛才停车。","立即停车，等到可以安全继续时再行动。","只要集装箱不在空中就可以继续行驶。"]},
+        {q:"行驶路线被阻断，后面还有其他集卡在等待。可以在非指定地点掉头以节省时间。应该怎么做？",
+         opts:["停车并联系班组长请求指示，不进行被禁止的操作。","由于路线被阻断，谨慎地掉头。","如果有其他工作人员指挥司机，就掉头。","如果底盘是空的，可以进行该操作。"]},
+        {q:"司机在班次中途接手一辆集卡。前一位司机大约一小时前已完成完整的检查清单，一切正常。应该怎么做？",
+         opts:["只检查自上次检查以来是否出现了新的损坏。","如果前一份检查清单已签字且完整，就可以依赖它。","只有在司机发现故障时才进行新的检查。","因为更换了集卡或司机，所以要进行新的检查清单。"]},
+        {q:"行驶路线上方有悬吊的货物，但看起来有足够的间隙可以从下方通过。应该怎么做？",
+         opts:["如果货物高度足够，可以缓慢通过。","等到集卡上方或行驶路线上方没有悬吊货物为止。","在场桥区域，如果驶出信号灯允许通行，可以通过。","前进到该区域边缘并在那里等待。"]},
+        {q:"司机需要短暂离开集卡。他穿上了安全鞋和反光背心，但安全帽在别处。应该怎么做？",
+         opts:["因为司机会一直待在集卡附近，所以可以离开。","如果该区域目前没有起重作业，可以离开。","在司机配齐所有必需的防护装备之前，不能离开集卡。","如果班组长知情，就可以离开。"]},
+        {q:"在开阔区域缓慢行驶时，手机收到一条与工作有关的信息。目前周围没有其他车辆通行。应该怎么做？",
+         opts:["在安全的地方停车，只有在集卡静止时才使用手机。","只要不打字，可以只阅读信息。","如果行驶速度非常低，可以使用手机。","如果道路畅通，可以快速看一眼。"]},
+        {q:"司机休息后回到之前使用的同一辆集卡。休息期间没有其他司机使用过该集卡。开车前应该怎么做？",
+         opts:["如果集卡完全停在原来的位置，就可以直接开车。","开车前检查一下后视镜就足够了。","只有在休息时间超过半小时时才需要额外检查。","开始行驶前必须重新检查集卡周围的环境。"]},
+        {q:"在船吊（STS）下方，码头信号员示意司机驶出，但司机看到驶出路线尚未完全畅通。他应该怎么做？",
+         opts:["因为信号员已经给予批准，所以缓慢开始驶出。","留在原地，直到驶出路线安全畅通为止。","前进到工作区域边缘然后停车。","按照信号员的指示驶出，并期望其他设备让开道路。"]},
+        {q:"司机正在接近一个狭窄的通道。看起来集卡本身可以通过，但司机不确定底盘是否有足够的间隙。应该怎么做？",
+         opts:["缓慢进入，并在前进过程中检查后视镜。","如果驾驶室能顺利通过，就进入。","停车，不要进入，直到确定整车都有足够的安全间隙，或者获得协助为止。","进入到通道中间再决定是否继续。"]},
+        {q:"船吊（STS）下方的作业已经结束，码头信号员移开了锥筒。由于视角问题，司机无法清楚看到集装箱和吊具的状态。他应该怎么做？",
+         opts:["留在原地，直到确定情况安全为止，不因存疑而开始移动。","因为信号员已经移开了锥筒，所以开始驶出。","缓慢前进，直到司机获得更好的视角。","如果前面的集卡也是这样做的，就驶出。"]},
+        {q:"司机遇到培训中没有明确说明的情况，不确定该如何处理。作业因此延误，其他设备也在等待。应该怎么做？",
+         opts:["选择司机认为最安全的做法并继续。","按照另一位有经验的司机在类似情况下会采取的做法行事。","做一个小动作，检查是否可以安全继续。","停下来，在采取任何行动之前联系相应的负责人寻求指导。"]}
+      ]
+    },
+
+    pt: { dir:'ltr', letters:['A','B','C','D'],
+      ui:{
+        headerTitle:"Exame de Segurança – Motoristas de Terminal Tractor",
+        labelFirst:"Nome", labelLast:"Sobrenome", labelEmail:"E-mail",
+        labelId:"Número de identidade", labelEmpNum:"Número de funcionário", labelDate:"Data",
+        errFirst:"Digite um nome (somente letras, no mínimo 2 caracteres)", errLast:"Digite um sobrenome (somente letras, no mínimo 2 caracteres)",
+        errEmail:"Digite um e-mail válido", errId:"Digite um número de identidade israelense ou chinês válido",
+        errEmpNum:"O número de funcionário deve ter exatamente 4 dígitos", errDate:"Selecione a data",
+        detailsAlert:"Preencha todos os campos destacados antes de continuar para o exame.",
+        btnToQuiz:"Ir para o exame",
+        questionOf:function(n,t){return "Pergunta "+n+" de "+t;},
+        progressOf:function(n,t){return "Respondidas "+n+" de "+t+" perguntas";},
+        quizAlertMissing:function(n){return "Ainda restam "+n+" perguntas sem resposta. Responda todas as perguntas antes de finalizar.";},
+        btnFinish:"Finalizar exame",
+        scoreSub:"de 100",
+        resultTitlePass:"Você foi aprovado no exame", resultTitleFail:"Você não foi aprovado no exame",
+        resultDescPass:function(c,t,p){return "Você acertou "+c+" de "+t+" perguntas. Nota mínima para aprovação: "+p+".";},
+        resultDescFail:function(c,t,p){return "Você acertou "+c+" de "+t+" perguntas. Nota mínima para aprovação: "+p+". Recomendamos revisar o material novamente.";},
+        summaryName:"Nome", summaryId:"Identidade", summaryEmpNum:"Nº de funcionário", summaryDate:"Data",
+        btnPdf:"📄 Baixar PDF com o resultado completo", btnPdfPreparing:"Preparando arquivo...",
+        emailStepTitle:"Última etapa – enviar o resultado",
+        emailStepDesc:"O arquivo que você baixou está agora na pasta de downloads do seu dispositivo. Clique no botão abaixo para abrir um e-mail pré-preenchido, anexe o PDF baixado e clique em enviar.",
+        btnMailto:"✉️ Abrir e-mail para enviar o resultado",
+        submitSending:"Enviando o resultado automaticamente...",
+        submitSuccess:"O resultado foi enviado com sucesso por e-mail.",
+        submitError:"Ocorreu um erro ao enviar o resultado automaticamente. Você pode baixar o arquivo PDF e enviá-lo manualmente usando o botão abaixo."
+      },
+      questions:[
+        {q:"O carregamento terminou sob o guindaste do navio (STS). O sinaleiro do cais moveu o cone e sinalizou para você sair. O que você deve verificar antes de começar a dirigir?",
+         opts:["Que o caminho está livre, e então pode sair conforme o sinal do sinaleiro.","Que o contêiner está apoiado no chassi, o spreader está totalmente desconectado e elevado a uma altura segura, e que o caminho está livre.","Que o spreader começou a subir, e então pode começar a sair devagar.","Que o sinaleiro mantém contato visual com o motorista durante a saída."]},
+        {q:"Está sendo feita a descarga do terminal tractor (tag) para o navio sob o guindaste do navio (STS). Quando é permitido começar a sair?",
+         opts:["Assim que o spreader travar no contêiner e o sinaleiro sinalizar para sair.","Assim que o contêiner começar a ser levantado e o caminho parecer livre.","Somente depois que o contêiner tiver sido totalmente levantado do chassi, afastado do terminal tractor e alcançado uma altura segura para sair.","Imediatamente depois que o sinaleiro mover o cone e não houver outro terminal tractor à frente."]},
+        {q:"Está sendo feita a descarga do terminal tractor para o pátio (block) usando o guindaste de pátio (ARMG). O semáforo de saída permite a circulação, mas o contêiner ainda está sobre o terminal tractor e ainda não entrou no pátio. O que fazer?",
+         opts:["Permanecer no lugar até que o contêiner tenha entrado no pátio e não haja carga suspensa sobre o terminal tractor ou sobre o caminho de saída.","Sair porque o semáforo de saída já permite a circulação.","Começar a sair devagar enquanto o contêiner continua subindo.","Sair enquanto não for ouvida a buzina do guindaste."]},
+        {q:"Está sendo feito o carregamento do pátio para o terminal tractor usando o guindaste de pátio (ARMG). O contêiner já está apoiado no chassi e o semáforo de saída permite a circulação, mas o spreader ainda está conectado. O que fazer?",
+         opts:["Começar a sair devagar porque o contêiner já está apoiado no chassi.","Esperar alguns segundos e sair se o semáforo ainda permitir.","Começar a sair enquanto o spreader não estiver exercendo pressão sobre o contêiner.","Esperar até que o spreader esteja totalmente desconectado e elevado a uma altura segura, e só depois que o caminho estiver livre, sair."]},
+        {q:"Um motorista dirige a 28 km/h e se aproxima de uma área movimentada sob o guindaste do navio (STS). Não há nenhum veículo à frente bloqueando. O que é correto?",
+         opts:["É possível continuar a 28 km/h, já que a velocidade permitida é de até 30 km/h.","A velocidade deve ser adaptada às condições da área, mesmo que fique significativamente abaixo de 30 km/h.","Só é preciso reduzir a velocidade se o sinaleiro ou o supervisor de turno pedir.","É possível manter a velocidade atual se o terminal tractor estiver circulando sem contêiner."]},
+        {q:"É necessário dar ré por apenas cerca de três metros. O motorista saiu do terminal tractor, verificou que não havia ninguém atrás e voltou para a cabine. Não há um sinalizador (spotter) disponível. O que é correto fazer?",
+         opts:["Fazer a marcha à ré devagar, já que a área foi verificada previamente.","Fazer a manobra usando os espelhos e a janela aberta.","Não fazer marcha à ré até que um sinalizador ou a assistência necessária esteja disponível.","É possível fazer a manobra se o terminal tractor estiver sem chassi."]},
+        {q:"Um motorista precisa desconectar um chassi. O supervisor de turno está na área, mas no momento ocupado com outra tarefa. O que é correto fazer?",
+         opts:["Esperar e fazer a desconexão somente na presença ou sob supervisão do supervisor de turno.","Iniciar a desconexão e esperar pelo supervisor de turno somente antes de começar a dirigir.","Pedir a outro motorista experiente que supervisione a desconexão.","Abaixar as pernas do chassi e desconectar as mangueiras de ar, mas não mover o terminal tractor."]},
+        {q:"Depois de desconectar um chassi, as pernas do chassi já foram abaixadas e ele está firme e estável. O que deve ser verificado antes de começar a dirigir?",
+         opts:["Que as pernas do chassi estão estáveis e o caminho à frente está livre.","Que o terminal tractor está alinhado e a conexão com o chassi parece solta.","Que não há outro veículo perto do chassi.","Que todas as conexões relevantes foram desconectadas, incluindo mangueiras de ar e cabos, e que o chassi está travado conforme exigido."]},
+        {q:"Durante a virada de um contêiner com uma reach stacker, o motorista entra na posição conforme as instruções, mas o terminal tractor não está bem alinhado. Depois de uma pequena tentativa de correção, o motorista ainda não tem certeza da posição. O que ele deve fazer?",
+         opts:["Sair da área e voltar em marcha à ré para tentar se realinhar.","Parar e chamar o líder de equipe ou o supervisor de turno para orientação.","Continuar fazendo pequenas correções até que o terminal tractor esteja alinhado.","Pedir ao operador da reach stacker para orientá-lo com sinais de buzina."]},
+        {q:"Durante o trabalho com a reach stacker, o operador toca a buzina uma vez. O motorista não vê nenhum perigo evidente. O que ele deve fazer?",
+         opts:["Reduzir a velocidade e continuar com cuidado.","Parar somente se outro toque de buzina for ouvido.","Parar imediatamente e esperar até que seja possível continuar com segurança.","Continuar enquanto o contêiner não estiver no ar."]},
+        {q:"O caminho de circulação está bloqueado e outros terminal tractors esperam atrás. É possível fazer um retorno (meia-volta) em um local não destinado a isso, economizando tempo. O que fazer?",
+         opts:["Parar e contatar o supervisor de turno para instruções, sem realizar a manobra proibida.","Fazer o retorno com cuidado, já que o caminho está bloqueado.","Fazer o retorno se outro trabalhador estiver orientando o motorista.","É possível fazer a manobra se o chassi estiver vazio."]},
+        {q:"Um motorista recebe um terminal tractor no meio do turno. O motorista anterior fez uma checklist completa cerca de uma hora antes e tudo estava certo. O que é correto fazer?",
+         opts:["Verificar apenas se houve algum dano novo desde a verificação anterior.","Confiar na checklist anterior se ela estiver assinada e completa.","Fazer uma nova checklist somente se o motorista identificar algum problema.","Fazer uma nova checklist porque houve troca de terminal tractor ou de motorista."]},
+        {q:"Há uma carga suspensa sobre o caminho de circulação, mas parece haver espaço suficiente para passar por baixo dela. O que é correto fazer?",
+         opts:["Passar devagar se a carga estiver em altura suficiente.","Esperar até que não haja carga suspensa sobre o terminal tractor ou sobre o caminho de circulação.","Na área do guindaste de pátio, é possível passar se o semáforo de saída permitir a circulação.","Avançar até a borda da área e esperar ali."]},
+        {q:"Um motorista precisa sair do terminal tractor por pouco tempo. Ele calça sapatos de segurança e veste um colete refletivo, mas o capacete está em outro lugar. O que é correto fazer?",
+         opts:["É possível sair, já que o motorista permanece perto do terminal tractor.","É possível sair se não houver atividade de guindaste na área no momento.","Não se deve sair do terminal tractor até que o motorista esteja equipado com todos os equipamentos de proteção exigidos.","É possível sair se o supervisor de turno souber disso."]},
+        {q:"Durante uma condução lenta em área aberta, chega uma mensagem no celular relacionada ao trabalho. No momento não há tráfego ao redor. O que é correto fazer?",
+         opts:["Parar em um local seguro e usar o celular somente quando o terminal tractor não estiver em movimento.","É possível apenas ler a mensagem, desde que não se digite nada.","É possível usar o celular se a velocidade de condução for muito baixa.","É possível dar uma olhada rápida se o caminho estiver livre."]},
+        {q:"O motorista volta do intervalo para o mesmo terminal tractor que usava antes. Nenhum outro motorista usou o terminal tractor durante o intervalo. O que é correto fazer antes de começar a dirigir?",
+         opts:["É possível começar a dirigir se o terminal tractor permaneceu exatamente no mesmo lugar.","Basta verificar os espelhos antes de sair.","Uma verificação adicional só é necessária se o intervalo tiver durado mais de meia hora.","É preciso verificar novamente o entorno do terminal tractor antes de começar a se mover."]},
+        {q:"Sob o guindaste do navio (STS), o sinaleiro do cais sinaliza para o motorista sair, mas o motorista vê que o caminho de saída ainda não está totalmente livre. O que ele deve fazer?",
+         opts:["Começar a sair devagar, já que o sinaleiro já deu a aprovação.","Permanecer no lugar até que o caminho de saída esteja seguro e livre.","Avançar até a borda da área de trabalho e então parar.","Sair conforme o sinal do sinaleiro e esperar que os outros equipamentos abram caminho."]},
+        {q:"O motorista se aproxima de uma passagem estreita. Parece que o próprio terminal tractor consegue passar, mas o motorista não tem certeza se há espaço suficiente para o chassi. O que é correto fazer?",
+         opts:["Entrar devagar e verificar os espelhos enquanto avança.","Entrar se a cabine passar sem problema.","Parar e não entrar até ter certeza de que há espaço seguro para todo o veículo, ou até obter ajuda.","Entrar até a metade da passagem e então decidir se pode continuar."]},
+        {q:"O trabalho sob o guindaste do navio (STS) terminou e o sinaleiro do cais moveu o cone. Devido ao ângulo de visão, o motorista não consegue ver claramente o estado do contêiner e do spreader. O que ele deve fazer?",
+         opts:["Permanecer no lugar até ter certeza de que a situação é segura, e não começar a se mover por dúvida.","Começar a sair porque o sinaleiro já moveu o cone.","Avançar devagar até que o motorista tenha um ângulo de visão melhor.","Sair se o terminal tractor à sua frente agiu da mesma forma."]},
+        {q:"O motorista se depara com uma situação que não aparece exatamente no treinamento e não tem certeza de como agir. O trabalho está sendo atrasado e outros equipamentos estão esperando. O que é correto fazer?",
+         opts:["Escolher a ação que parece mais segura ao motorista e continuar.","Agir como outro motorista experiente agiria em uma situação semelhante.","Fazer um pequeno movimento e verificar se é possível continuar com segurança.","Parar e contatar a pessoa responsável apropriada para orientação antes de realizar qualquer ação."]}
+      ]
+    }
+  };
+
+  var currentLang = 'he';
+  var answers = new Array(NUM_Q).fill(null);
+
+  // ---------- field-level validators ----------
+  var NAME_RE = /^\p{L}+(\s\p{L}+)*$/u; // letters (any language) and single spaces only, no digits/symbols
+  function isValidName(v){
+    var t = v.trim();
+    return t.length >= 2 && NAME_RE.test(t);
+  }
+
+  function isValidIsraeliId(v){
+    var t = v.trim();
+    if(!/^\d{1,9}$/.test(t)) return false;
+    t = t.padStart(9, '0');
+    var sum = 0;
+    for(var i = 0; i < 9; i++){
+      var val = Number(t[i]) * (i % 2 === 0 ? 1 : 2);
+      if(val > 9) val -= 9;
+      sum += val;
+    }
+    return sum % 10 === 0;
+  }
+
+  function isValidChineseId(v){
+    var t = v.trim().toUpperCase();
+    if(!/^\d{17}[\dX]$/.test(t)) return false;
+    var weights = [7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2];
+    var checkMap = ['1','0','X','9','8','7','6','5','4','3','2'];
+    var sum = 0;
+    for(var i = 0; i < 17; i++) sum += Number(t[i]) * weights[i];
+    return checkMap[sum % 11] === t[17];
+  }
+
+  function isValidId(v){
+    return isValidIsraeliId(v) || isValidChineseId(v);
+  }
+
+  // ---------- fields ----------
+  var fields = {
+    first: {el: document.getElementById('f-first'), validate: isValidName},
+    last:  {el: document.getElementById('f-last'),  validate: isValidName},
+    email: {el: document.getElementById('f-email'), validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())},
+    id:    {el: document.getElementById('f-id'),    validate: isValidId},
+    empnum:{el: document.getElementById('f-empnum'),validate: v => /^\d{4}$/.test(v.trim())},
+    date:  {el: document.getElementById('f-date'),  validate: v => v.trim().length > 0}
+  };
+  var today = new Date();
+  fields.date.el.value = today.toISOString().slice(0,10);
+
+  var screenDetails = document.getElementById('screen-details');
+  var screenQuiz = document.getElementById('screen-quiz');
+  var screenResult = document.getElementById('screen-result');
+  var qlist = document.getElementById('qlist');
+
+  // ---------- language handling ----------
+  function ui(){ return T[currentLang].ui; }
+  function qs(){ return T[currentLang].questions; }
+  function letters(){ return T[currentLang].letters; }
+
+  function applyLanguage(lang){
+    currentLang = lang;
+    var dir = T[lang].dir;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = dir;
+    document.getElementById('lang-select').value = lang;
+
+    var u = ui();
+    document.title = u.headerTitle;
+    document.getElementById('txt-header-title').textContent = u.headerTitle;
+
+    document.getElementById('lbl-first').textContent = u.labelFirst;
+    document.getElementById('lbl-last').textContent = u.labelLast;
+    document.getElementById('lbl-email').textContent = u.labelEmail;
+    document.getElementById('lbl-id').textContent = u.labelId;
+    document.getElementById('lbl-empnum').textContent = u.labelEmpNum;
+    document.getElementById('lbl-date').textContent = u.labelDate;
+
+    document.getElementById('err-first').textContent = u.errFirst;
+    document.getElementById('err-last').textContent = u.errLast;
+    document.getElementById('err-email').textContent = u.errEmail;
+    document.getElementById('err-id').textContent = u.errId;
+    document.getElementById('err-empnum').textContent = u.errEmpNum;
+    document.getElementById('err-date').textContent = u.errDate;
+
+    document.getElementById('details-alert').textContent = u.detailsAlert;
+    document.getElementById('btn-to-quiz').textContent = u.btnToQuiz;
+    document.getElementById('btn-finish').textContent = u.btnFinish;
+    document.getElementById('score-sub').textContent = u.scoreSub;
+    document.getElementById('email-step-title').textContent = u.emailStepTitle;
+    document.getElementById('email-step-desc').textContent = u.emailStepDesc;
+    document.getElementById('btn-mailto').textContent = u.btnMailto;
+
+    var pdfBtn = document.getElementById('btn-pdf');
+    if(!pdfBtn.disabled) pdfBtn.textContent = u.btnPdf;
+
+    if(lastSubmitKind){
+      var statusMap = {pending:'submitSending', success:'submitSuccess', error:'submitError'};
+      setSubmitStatus(lastSubmitKind, u[statusMap[lastSubmitKind]]);
+    }
+
+    renderQuestions();
+    updateProgress();
+    renderResultTexts();
+  }
+
+  document.getElementById('lang-select').addEventListener('change', function(e){
+    applyLanguage(e.target.value);
+  });
+
+  // ---------- render quiz questions for current language ----------
+  function renderQuestions(){
+    qlist.innerHTML = '';
+    var Q = qs();
+    var L = letters();
+    var u = ui();
+    Q.forEach(function(item, qi){
+      var block = document.createElement('div');
+      block.className = 'qblock';
+      block.id = 'qblock-'+qi;
+
+      var num = document.createElement('div');
+      num.className = 'qnum';
+      num.textContent = u.questionOf(qi+1, NUM_Q);
+      block.appendChild(num);
+
+      var qt = document.createElement('div');
+      qt.className = 'qtext';
+      qt.textContent = item.q;
+      block.appendChild(qt);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      item.opts.forEach(function(optText, oi){
+        var label = document.createElement('label');
+        label.className = 'opt';
+        if(answers[qi] === oi) label.classList.add('selected');
+        var input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'q'+qi;
+        input.value = oi;
+        if(answers[qi] === oi) input.checked = true;
+        input.addEventListener('change', function(){
+          answers[qi] = oi;
+          Array.prototype.forEach.call(opts.querySelectorAll('.opt'), function(o){ o.classList.remove('selected'); });
+          label.classList.add('selected');
+          block.classList.remove('q-error');
+          updateProgress();
+        });
+        var span = document.createElement('span');
+        span.textContent = L[oi] + '. ' + optText;
+        label.appendChild(input);
+        label.appendChild(span);
+        opts.appendChild(label);
+      });
+      block.appendChild(opts);
+      qlist.appendChild(block);
+    });
+  }
+
+  function updateProgress(){
+    var answered = answers.filter(function(a){ return a !== null; }).length;
+    document.getElementById('progress-text').textContent = ui().progressOf(answered, NUM_Q);
+    document.getElementById('progress-fill').style.width = (answered / NUM_Q * 100) + '%';
+  }
+
+  // ---------- screen 1 -> 2 ----------
+  document.getElementById('btn-to-quiz').addEventListener('click', function(){
+    var allOk = true;
+    Object.keys(fields).forEach(function(key){
+      var f = fields[key];
+      var wrap = document.querySelector('[data-field="'+key+'"]');
+      var ok = f.validate(f.el.value);
+      wrap.classList.toggle('has-error', !ok);
+      if(!ok) allOk = false;
+    });
+    var alertBox = document.getElementById('details-alert');
+    if(!allOk){
+      alertBox.classList.add('show');
+      var firstError = document.querySelector('.field.has-error');
+      if(firstError){ firstError.scrollIntoView({behavior:'smooth', block:'center'}); firstError.querySelector('input').focus(); }
+      return;
+    }
+    alertBox.classList.remove('show');
+    screenDetails.classList.add('hidden');
+    screenQuiz.classList.remove('hidden');
+    window.scrollTo({top:0, behavior:'instant'});
+  });
+
+  // ---------- screen 2 -> 3 ----------
+  document.getElementById('btn-finish').addEventListener('click', function(){
+    var firstMissing = -1;
+    answers.forEach(function(a, i){
+      var block = document.getElementById('qblock-'+i);
+      if(a === null){
+        block.classList.add('q-error');
+        if(firstMissing === -1) firstMissing = i;
+      } else {
+        block.classList.remove('q-error');
+      }
+    });
+    var alertBox = document.getElementById('quiz-alert');
+    if(firstMissing !== -1){
+      var missingCount = answers.filter(function(a){ return a === null; }).length;
+      alertBox.textContent = ui().quizAlertMissing(missingCount);
+      alertBox.classList.add('show');
+      document.getElementById('qblock-'+firstMissing).scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    alertBox.classList.remove('show');
+    showResult();
+  });
+
+  // ---------- screen 3 ----------
+  function showResult(){
+    var correct = 0;
+    answers.forEach(function(a, i){ if(a === QUESTIONS_HE[i].correct) correct++; });
+    var score = Math.round(correct / NUM_Q * 100);
+    var passed = score >= PASS_SCORE;
+
+    screenQuiz.classList.add('hidden');
+    screenResult.classList.remove('hidden');
+    window.scrollTo({top:0, behavior:'instant'});
+
+    var circle = document.getElementById('score-circle');
+    circle.classList.add(passed ? 'pass' : 'fail');
+    document.getElementById('result-title').classList.add(passed ? 'pass' : 'fail');
+
+    window._examResult = {correct: correct, score: score, passed: passed};
+
+    renderResultTexts();
+
+    document.getElementById('btn-pdf').textContent = ui().btnPdf;
+
+    submitResultToServer();
+  }
+
+  // renders the language-dependent texts on the result screen; also called
+  // from applyLanguage() so switching language after the result is shown
+  // (e.g. page 3) re-translates it instead of staying frozen.
+  function renderResultTexts(){
+    var res = window._examResult;
+    if(!res) return;
+    var u = ui();
+
+    document.getElementById('score-num').textContent = res.score;
+
+    document.getElementById('result-title').textContent = res.passed ? u.resultTitlePass : u.resultTitleFail;
+
+    document.getElementById('result-desc').textContent = res.passed
+      ? u.resultDescPass(res.correct, NUM_Q, PASS_SCORE)
+      : u.resultDescFail(res.correct, NUM_Q, PASS_SCORE);
+
+    document.getElementById('result-summary').innerHTML =
+      '<div><b>' + esc(u.summaryName) + ':</b> ' + esc(fields.first.el.value) + ' ' + esc(fields.last.el.value) + '</div>' +
+      '<div><b>' + esc(u.summaryId) + ':</b> ' + esc(fields.id.el.value) + ' &nbsp; <b>' + esc(u.summaryEmpNum) + ':</b> ' + esc(fields.empnum.el.value) + '</div>' +
+      '<div><b>' + esc(u.summaryDate) + ':</b> ' + esc(fields.date.el.value) + '</div>';
+  }
+
+  // ---------- automatic server-side submission — sends the email server-side, no driver action needed ----------
+  var API_SUBMIT_URL = '/api/submit';
+  var lastSubmitKind = null;
+
+  function setSubmitStatus(kind, text){
+    lastSubmitKind = kind;
+    var el = document.getElementById('submit-status');
+    if(!el) return;
+    el.textContent = text;
+    el.style.color = kind === 'error' ? 'var(--danger)' : (kind === 'success' ? 'var(--success)' : 'var(--muted)');
+    el.style.background = kind === 'error' ? 'var(--danger-bg)' : (kind === 'success' ? 'var(--success-bg)' : '#F7F9FA');
+  }
+
+  function submitResultToServer(){
+    var u = ui();
+    setSubmitStatus('pending', u.submitSending);
+
+    var payload = {
+      first: fields.first.el.value,
+      last: fields.last.el.value,
+      email: fields.email.el.value,
+      id: fields.id.el.value,
+      empnum: fields.empnum.el.value,
+      date: fields.date.el.value,
+      lang: currentLang,
+      answers: answers
+    };
+
+    fetch(API_SUBMIT_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(r){
+      if(!r.ok) throw new Error('bad status ' + r.status);
+      return r.json();
+    }).then(function(data){
+      if(!data || !data.ok) throw new Error('server reported failure');
+      setSubmitStatus('success', ui().submitSuccess);
+    }).catch(function(err){
+      console.error('submitResultToServer failed:', err);
+      setSubmitStatus('error', ui().submitError);
+    });
+  }
+
+  function esc(s){
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : s;
+    return d.innerHTML;
+  }
+
+  // ---------- PDF export — always Hebrew, regardless of UI language ----------
+  document.getElementById('btn-pdf').addEventListener('click', function(){
+    buildAndDownloadPdf();
+  });
+
+  function buildAndDownloadPdf(){
+    var btn = document.getElementById('btn-pdf');
+    var originalText = btn.textContent;
+    btn.textContent = ui().btnPdfPreparing;
+    btn.disabled = true;
+
+    var res = window._examResult;
+    var heLetters = ['א','ב','ג','ד'];
+    var printable = document.getElementById('printable');
+    printable.innerHTML = '';
+
+    var header = document.createElement('div');
+    header.className = 'p-header';
+    header.innerHTML = '<h2>מבחן בטיחות – נהגי טאג</h2><p>מסוף מכולות · דוח תוצאה אישי</p>';
+    printable.appendChild(header);
+
+    var details = document.createElement('div');
+    details.className = 'p-details';
+    details.innerHTML =
+      '<table><tr><td class="k">שם מלא</td><td class="v">' + esc(fields.first.el.value) + ' ' + esc(fields.last.el.value) + '</td>' +
+      '<td class="k">תאריך</td><td class="v">' + esc(fields.date.el.value) + '</td></tr>' +
+      '<tr><td class="k">תעודת זהות</td><td class="v">' + esc(fields.id.el.value) + '</td>' +
+      '<td class="k">מספר עובד</td><td class="v">' + esc(fields.empnum.el.value) + '</td></tr>' +
+      '<tr><td class="k">אימייל</td><td class="v" style="direction:ltr;text-align:right;">' + esc(fields.email.el.value) + '</td><td></td><td></td></tr></table>';
+    printable.appendChild(details);
+
+    var scoreRow = document.createElement('div');
+    scoreRow.className = 'p-score';
+    scoreRow.innerHTML =
+      '<div class="num ' + (res.passed?'pass':'fail') + '">' + res.score + '</div>' +
+      '<div><div class="lbl">' + (res.passed ? 'עבר/ה את המבחן' : 'לא עבר/ה את המבחן') + '</div>' +
+      '<div style="font-size:12px;color:#64707C;">' + res.correct + ' תשובות נכונות מתוך ' + NUM_Q + ' · ציון עובר: ' + PASS_SCORE + '</div></div>';
+    printable.appendChild(scoreRow);
+
+    QUESTIONS_HE.forEach(function(item, qi){
+      var qDiv = document.createElement('div');
+      qDiv.className = 'p-q';
+      var chosen = answers[qi];
+      var html = '<div class="qn">שאלה ' + (qi+1) + '</div><div class="qt">' + esc(item.q) + '</div>';
+      item.opts.forEach(function(optText, oi){
+        var cls = '';
+        if(oi === item.correct) cls = 'correct';
+        else if(oi === chosen) cls = 'wrong';
+        if(cls){
+          html += '<div class="oa ' + cls + '">' + heLetters[oi] + '. ' + esc(optText) + (oi===item.correct ? '  ✓ תשובה נכונה' : '  ✗ נבחרה') + '</div>';
+        }
+      });
+      qDiv.innerHTML = html;
+      printable.appendChild(qDiv);
+    });
+
+    var langNote = '';
+    if(currentLang !== 'he'){
+      var langNames = {en:'אנגלית', ar:'ערבית', ru:'רוסית', zh:'סינית', pt:'פורטוגזית'};
+      langNote = ' · המבחן בוצע בשפה: ' + (langNames[currentLang] || currentLang);
+    }
+    var foot = document.createElement('div');
+    foot.className = 'p-foot';
+    foot.textContent = 'הופק אוטומטית בתאריך ' + new Date().toLocaleDateString('he-IL') + ' בשעה ' + new Date().toLocaleTimeString('he-IL') + langNote;
+    printable.appendChild(foot);
+
+    setTimeout(function(){
+      html2canvas(printable, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(function(canvas){
+        var pdf = new window.jspdf.jsPDF('p','pt','a4');
+        var pageW = pdf.internal.pageSize.getWidth();
+        var pageH = pdf.internal.pageSize.getHeight();
+        var imgW = pageW;
+        var imgH = canvas.height * imgW / canvas.width;
+        var heightLeft = imgH;
+        var position = 0;
+        var imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+        pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+        heightLeft -= pageH;
+        while(heightLeft > 0){
+          position = heightLeft - imgH;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+          heightLeft -= pageH;
+        }
+
+        var blob = pdf.output('blob');
+        var filename = 'מבחן-בטיחות-' + (fields.first.el.value||'').trim() + '-' + (fields.last.el.value||'').trim() + '.pdf';
+
+        finishDownload(blob, filename, btn, originalText);
+      }).catch(function(err){
+        console.error(err);
+        btn.textContent = originalText;
+        btn.disabled = false;
+        alert('אירעה שגיאה ביצירת הקובץ. נסו שוב. / An error occurred generating the file. Please try again.');
+      });
+    }, 50);
+  }
+
+  // ---------- mailto — always Hebrew, always to EMAIL_TO ----------
+  function buildMailtoUrl(){
+    var res = window._examResult || {};
+    var fullName = (fields.first.el.value||'').trim() + ' ' + (fields.last.el.value||'').trim();
+    var subject = 'תוצאת מבחן בטיחות - ' + fullName + ' - ' + (fields.date.el.value||'');
+    var bodyLines = [
+      'שלום,',
+      '',
+      'מצורפת תוצאת מבחן הבטיחות לנהג/ת טאג.',
+      '',
+      'שם מלא: ' + fullName,
+      'תעודת זהות: ' + (fields.id.el.value||''),
+      'מספר עובד: ' + (fields.empnum.el.value||''),
+      'תאריך: ' + (fields.date.el.value||''),
+      'ציון: ' + (res.score !== undefined ? res.score : '') + ' מתוך 100',
+      'סטטוס: ' + (res.passed ? 'עבר/ה את המבחן' : 'לא עבר/ה את המבחן'),
+      '',
+      '*** נא לצרף כאן את קובץ ה-PDF שהורד למכשיר לפני השליחה ***',
+      '',
+      'תודה'
+    ];
+    return 'mailto:' + encodeURIComponent(EMAIL_TO) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(bodyLines.join('\n'));
+  }
+
+  function finishDownload(blob, filename, btn, originalText){
+    async function tryClaudeDownload(){
+      try{
+        if(window.claude && typeof window.claude.use === 'function'){
+          var downloads = await window.claude.use('downloads');
+          if(downloads){
+            await downloads.save({filename: filename, data: blob});
+            return true;
+          }
+        }
+      }catch(e){ /* fall through to plain browser download */ }
+      return false;
+    }
+    tryClaudeDownload().then(function(handled){
+      if(!handled){
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      }
+      btn.textContent = ui().btnPdf;
+      btn.disabled = false;
+
+      var emailStep = document.getElementById('email-step');
+      var mailtoBtn = document.getElementById('btn-mailto');
+      mailtoBtn.href = buildMailtoUrl();
+      emailStep.classList.remove('hidden');
+      emailStep.scrollIntoView({behavior:'smooth', block:'nearest'});
+    });
+  }
+
+  // ---------- init ----------
+  applyLanguage('he');
+
+})();
+</script>
+</body>
+</html>
