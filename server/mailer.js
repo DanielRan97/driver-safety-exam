@@ -34,7 +34,12 @@ async function sendResultEmail({ submission, pdfBuffer }) {
     'הודעה זו נשלחה אוטומטית ממערכת המבחן.',
   ].join('\n');
 
-  const filename = `מבחן-בטיחות-${fullName || 'תוצאה'}.pdf`;
+  // Attachment filenames must stay ASCII — a Hebrew filename in the
+  // Content-Disposition header broke the attachment entirely in Gmail
+  // (garbled name, file wouldn't even open). The PDF's *content* is still
+  // full Hebrew as always; only the filename itself is Latin/ASCII.
+  const filenameSafeId = String(empnum || id || 'result').replace(/[^A-Za-z0-9-]/g, '');
+  const filename = `driver-safety-exam-${filenameSafeId}-${date || ''}.pdf`.replace(/[^A-Za-z0-9._-]/g, '-');
   const from = process.env.RESEND_FROM || 'Driver Safety Exam <onboarding@resend.dev>';
 
   console.log(`Sending result email for "${fullName}" — from: ${from} — to: ${EMAIL_TO}`);
