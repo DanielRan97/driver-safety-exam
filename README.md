@@ -14,7 +14,7 @@ server/index.js      — Express app + endpoint POST /api/submit
 server/questions.js  — קורא את מאגר השאלות (QUESTIONS_HE) ישירות מתוך public/exam.html,
                         כך שאין כפילות/סטייה אפשרית בין הלקוח לשרת
 server/pdf.js         — בונה את ה-PDF בצד השרת עם Puppeteer (מדפיס HTML אמיתי, לא צילום מסך)
-server/mailer.js      — שולח את המייל דרך nodemailer/SMTP
+server/mailer.js      — שולח את המייל דרך Resend (HTTP API, לא SMTP)
 server/storage.js     — לוג גיבוי מצטבר ל-data/submissions.csv
 data/                  — נוצר אוטומטית, לא נכנס ל-git (מכיל מידע אישי על נהגים)
 ```
@@ -29,7 +29,7 @@ npm install
 cp .env.example .env
 ```
 
-ערוך/י את `.env` ומלא/י פרטי SMTP אמיתיים (ראו סעיף 3 למטה). ואז:
+ערוך/י את `.env` ומלא/י `RESEND_API_KEY` אמיתי (ראו סעיף 3 למטה). ואז:
 
 ```bash
 npm start
@@ -40,9 +40,9 @@ npm start
 כמה שניות אמור להישלח מייל אוטומטית ל-`efi@almogsea.co.il` עם ה-PDF מצורף,
 ומתחת לציון יופיע סטטוס ("שולח את התוצאה..." → "התוצאה נשלחה בהצלחה במייל").
 
-אם אין `.env`/SMTP מוגדר, השליחה תיכשל בכוונה (עם הודעת שגיאה ברורה בלוג
-השרת), אבל שורת הגיבוי עדיין תישמר ב-`data/submissions.csv` והנהג יראה הודעת
-שגיאה עם אפשרות להוריד את ה-PDF ולשלוח ידנית.
+אם אין `.env`/`RESEND_API_KEY` מוגדר, השליחה תיכשל בכוונה (עם הודעת שגיאה ברורה
+בלוג השרת), אבל שורת הגיבוי עדיין תישמר ב-`data/submissions.csv` והנהג יראה
+הודעת שגיאה עם אפשרות להוריד את ה-PDF ולשלוח ידנית.
 
 ## 2. פריסה (Deploy) — מומלץ: Render
 
@@ -53,46 +53,65 @@ Chromium בזמן ה-build, ולכן **Render (Web Service)** או **Railway** �
 ### Render (הכי פשוט)
 1. דחפו את הפרויקט ל-GitHub (בלי `.env` — הוא ב-`.gitignore`).
 2. ב-Render: New → Web Service → חברו את ה-repo.
-3. Build Command: `npm install`
-4. Start Command: `npm start`
-5. הוסיפו את משתני הסביבה מסעיף 3 למטה תחת Environment.
-6. (מומלץ) הוסיפו Persistent Disk קטן (1GB מספיק) ומחוברת לנתיב `/opt/render/project/src/data`
+3. **Build Command**: `npm install && npx puppeteer browsers install chrome`
+   (לא סתם `npm install` — אחרת Puppeteer עלול "לאבד" את Chrome בין שלב ה-build
+   לשלב ה-runtime, וגם קאש build ישן עלול לדלג על הורדת הדפדפן).
+4. **Start Command**: `npm start`
+5. תחת **Environment**, הוסיפו את המשתנים האלה (כל אחד כשורה נפרדת, KEY ו-VALUE —
+   לא הכל בשדה אחד):
+   - כל משתני ה-Resend מסעיף 3 למטה (`RESEND_API_KEY` וכו').
+   - `PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer`
+     (מכריח את Puppeteer לשמור את Chrome בתוך תיקיית הפרויקט, כדי שהוא יעבור
+     נכון מ-build ל-runtime).
+6. **חשוב**: אחרי הוספת/שינוי משתני סביבה, תמיד ודאו שנשמרו בפועל (לחצו Save,
+   ורעננו את הדף כדי לוודא שהם עדיין שם) לפני שעושים deploy.
+7. (מומלץ) הוסיפו Persistent Disk קטן (1GB מספיק) ומחוברת לנתיב `/opt/render/project/src/data`
    אם חשוב לכם ש-`submissions.csv` ישרוד בין דיפלוימנטים. בלי דיסק קבוע,
    הקובץ עדיין נכתב אבל עלול להימחק בדיפלוי הבא — זה בסדר, כי הוא רק גיבוי;
    המייל הוא הערוץ הראשי.
-7. Deploy. הכתובת הציבורית שתקבלו היא בדיוק מה ששולחים לנהגים.
+8. Deploy. הכתובת הציבורית שתקבלו היא בדיוק מה ששולחים לנהגים.
+
+**שים לב (Free tier)**: שירות חינמי ב-Render "נרדם" אחרי חוסר פעילות, וה-בקשה
+הראשונה אחרי שינה יכולה לקחת 50+ שניות. זה תקין — לא תקלה.
 
 ### Railway (חלופה טובה באותה מידה)
 זהה בעיקרון: New Project → Deploy from GitHub → הוסיפו את משתני הסביבה →
 Railway מזהה `npm start` אוטומטית. אם תרצו שהגיבוי ב-CSV ישרוד, הוסיפו Volume
 ומפו אותו לתיקיית `data/`.
 
-## 3. משתני סביבה נדרשים (SMTP)
+## 3. משתני סביבה נדרשים (Resend)
 
-הקוד משתמש ב-nodemailer מעל SMTP רגיל — זה עובד עם כל ספק (Gmail, Outlook,
-או שירות טרנזקציוני כמו Brevo/SendGrid/Mailgun), כי לכולם יש ממשק SMTP זהה.
-לא צריך לבחור ספק ספציפי בקוד — רק להזין את הפרטים הנכונים במשתני הסביבה.
+**למה לא SMTP רגיל (Gmail וכו')?** ניסינו את זה קודם וזה עבד מקומית, אבל
+נכשל תמיד מ-Render עם `ETIMEDOUT` — **תוכניות החינם של Render (ושל כמה
+פלטפורמות דומות) חוסמות חיבורי SMTP יוצאים לגמרי**, כמדיניות אנטי-ספאם. זו
+לא תקלה שניתן לתקן בצד שלנו. הפתרון: לשלוח מייל דרך API מבוסס HTTP (פורט
+443 רגיל, לא חסום) במקום SMTP גולמי. Resend הוא כזה, עם רמה חינמית נדיבה.
+
+1. הירשמו בחינם ב-[resend.com](https://resend.com) (בלי כרטיס אשראי).
+2. צרו API key ב-[resend.com/api-keys](https://resend.com/api-keys).
+3. הדביקו אותו ל-`.env`:
+
+```
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 | משתנה | הסבר |
 |---|---|
-| `SMTP_HOST` | כתובת שרת ה-SMTP |
-| `SMTP_PORT` | בד"כ `587` |
-| `SMTP_SECURE` | `false` עבור פורט 587, `true` עבור 465 |
-| `SMTP_USER` | שם המשתמש להתחברות ל-SMTP |
-| `SMTP_PASS` | הסיסמה/מפתח |
-| `SMTP_FROM` | (אופציונלי) כתובת "מאת" — אם ריק, ישתמש ב-`SMTP_USER` |
+| `RESEND_API_KEY` | המפתח מ-resend.com/api-keys — חובה |
+| `RESEND_FROM` | (אופציונלי) כתובת "מאת". בלי דומיין מאומת ב-Resend, אפשר לשלוח רק מ-`onboarding@resend.dev` (ברירת המחדל) — זה עובד מצוין לשליחה עצמה, רק הכתובת שתופיע כ"שולח" תהיה זו, לא `daniel@almogsea.co.il`. |
 | `MAIL_TO` | (אופציונלי) לשינוי כתובת היעד; ברירת המחדל היא `efi@almogsea.co.il` |
 | `PORT` | פורט השרת (ברירת מחדל 3000; ב-Render/Railway מוגדר אוטומטית) |
 
-**האופציה המהירה ביותר להתחלה — Gmail App Password:**
-1. הפעילו אימות דו-שלבי בחשבון ה-Gmail ששולח את המיילים.
-2. גשו ל- google.com/myaccount/apppasswords וצרו App Password חדש (לבחור "Mail").
-3. השתמשו בכתובת ה-Gmail כ-`SMTP_USER` ובסיסמה בת 16 התווים שקיבלתם כ-`SMTP_PASS`.
-4. `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_SECURE=false`.
+**אם תרצו שכתובת ה"מאת" תהיה `@almogsea.co.il` ולא `onboarding@resend.dev`**:
+ב-Resend → Domains → Add Domain → `almogsea.co.il`, ואז מוסיפים כמה רשומות
+DNS (SPF/DKIM) שהם נותנים אצל ספק הדומיין שלכם. לוקח כמה דקות הגדרה +
+עד כמה שעות לאימות DNS. לא חובה כדי שהמערכת תעבוד — זה שיפור קוסמטי בלבד.
 
-זה מספיק ואמין לגמרי לכמות של 60 נהגים. אם בעתיד תרצו נפח גדול יותר/סטטיסטיקות
-שליחה, אפשר לעבור לספק טרנזקציוני (למשל Brevo — יש להם 300 מיילים/יום בחינם
-ודף הגדרות SMTP ברור) בלי לשנות קוד, רק את משתני הסביבה.
+תבדקו חיבור מהיר בלי לעבור את כל ה-UI:
+
+```bash
+npm run check-email
+```
 
 ## 4. איך לוודא שזה עובד לפני שליחה ל-60 נהגים
 

@@ -4,15 +4,17 @@
   "private": true,
   "description": "Driver safety exam — frontend + backend that emails the result automatically on submit.",
   "main": "server/index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
-    "check-smtp": "node scripts/check-smtp.js"
+    "check-email": "node scripts/check-email.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "nodemailer": "^10.0.10",
     "puppeteer": "^25.11.0"
   }
 }

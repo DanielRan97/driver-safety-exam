@@ -1,30 +1,18 @@
-// Sends the result email from the server via SMTP (nodemailer). Configure
-// SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS (and optionally SMTP_FROM,
-// SMTP_SECURE, MAIL_TO) as environment variables — see README.md.
-const nodemailer = require('nodemailer');
-
+// Sends the result email via the Resend HTTP API (https://resend.com).
+// We use an HTTP API instead of raw SMTP because several free-tier hosts
+// (Render's free plan among them) block outbound SMTP connections
+// entirely — HTTPS calls like this one are unaffected.
+// Configure RESEND_API_KEY (and optionally RESEND_FROM, MAIL_TO) as
+// environment variables — see README.md.
 const EMAIL_TO = process.env.MAIL_TO || 'efi@almogsea.co.il';
-
-let transporter = null;
-function getTransporter() {
-  if (!transporter) {
-    if (!process.env.SMTP_HOST) {
-      throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in your environment.');
-    }
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === 'true', // true for port 465, false for 587/STARTTLS
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return transporter;
-}
+const RESEND_API_URL = 'https://api.resend.com/emails';
 
 async function sendResultEmail({ submission, pdfBuffer }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured. Set it in your environment.');
+  }
+
   const { first, last, id, empnum, date, score, passed, email } = submission;
   const fullName = `${first} ${last}`.trim();
   const subject = `תוצאת מבחן בטיחות - ${fullName} - ${date}`;
@@ -47,20 +35,32 @@ async function sendResultEmail({ submission, pdfBuffer }) {
   ].join('\n');
 
   const filename = `מבחן-בטיחות-${fullName || 'תוצאה'}.pdf`;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const from = process.env.RESEND_FROM || 'Driver Safety Exam <onboarding@resend.dev>';
 
-  console.log(`Sending result email for "${fullName}" — from: ${from} (logged in as SMTP_USER: ${process.env.SMTP_USER}) — to: ${EMAIL_TO}`);
+  console.log(`Sending result email for "${fullName}" — from: ${from} — to: ${EMAIL_TO}`);
 
-  const info = await getTransporter().sendMail({
-    from,
-    to: EMAIL_TO,
-    replyTo: email || undefined,
-    subject,
-    text,
-    attachments: [{ filename, content: pdfBuffer, contentType: 'application/pdf' }],
+  const res = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [EMAIL_TO],
+      reply_to: email || undefined,
+      subject,
+      text,
+      attachments: [{ filename, content: pdfBuffer.toString('base64') }],
+    }),
   });
 
-  console.log(`Email accepted by SMTP server. messageId: ${info.messageId} | response: ${info.response}`);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Resend API error (${res.status}): ${body.message || JSON.stringify(body)}`);
+  }
+
+  console.log(`Email accepted by Resend. id: ${body.id}`);
 }
 
 module.exports = { sendResultEmail, EMAIL_TO };
