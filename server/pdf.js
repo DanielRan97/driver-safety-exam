@@ -96,6 +96,16 @@ function getBrowser() {
   return browserPromise;
 }
 
+function withTimeout(promise, ms) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    Promise.resolve(promise).then(
+      () => { clearTimeout(timer); resolve(); },
+      () => { clearTimeout(timer); resolve(); }, // font load failing shouldn't block the PDF
+    );
+  });
+}
+
 async function buildResultPdf({ submission, questions }) {
   const html = buildHtml({ submission, questions });
   const browser = await getBrowser();
@@ -103,9 +113,11 @@ async function buildResultPdf({ submission, questions }) {
   try {
     // 'domcontentloaded' avoids hanging on unrelated keep-alive connections
     // (seen on Render's network) that 'networkidle0' waits out; we instead
-    // wait specifically for the Heebo webfont to finish loading below.
+    // wait specifically for the Heebo webfont to finish loading below, but
+    // bounded — document.fonts.ready has no built-in timeout and can hang
+    // forever if the font request stalls, so we cap it ourselves.
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await page.evaluate(() => document.fonts.ready).catch(() => {});
+    await withTimeout(page.evaluate(() => document.fonts.ready), 8000);
     return await page.pdf({ format: 'A4', printBackground: true });
   } finally {
     await page.close();
