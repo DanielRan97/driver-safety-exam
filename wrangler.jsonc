@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "driver-safety-exam",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Serves public/index.html + public/assets/* directly from Cloudflare's
+  // edge — no cold start, doesn't invoke the Worker at all. Only requests
+  // that don't match a static file (i.e. POST /api/submit) fall through
+  // to worker/index.js.
+  "assets": {
+    "directory": "./public/",
+    "binding": "ASSETS"
+  },
+
+  // Cloudflare Browser Run — lets worker/pdf.js drive a real (remote)
+  // headless Chrome via @cloudflare/puppeteer to generate the result PDF.
+  // Free plan: 10 min/day, 3 concurrent sessions.
+  "browser": {
+    "binding": "MYBROWSER"
+  },
+
+  // Backup of every submission (replaces the CSV file the Render version
+  // wrote to local disk). Create this namespace first with:
+  //   wrangler kv namespace create SUBMISSIONS_KV
+  // then paste the returned id below.
+  "kv_namespaces": [
+    {
+      "binding": "SUBMISSIONS_KV",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+
+  // Non-secret config. RESEND_API_KEY is a secret — set it with
+  // `wrangler secret put RESEND_API_KEY`, never here.
+  "vars": {
+    "MAIL_TO": "efi@almogsea.co.il",
+    "RESEND_FROM": "Driver Safety Exam <onboarding@resend.dev>"
+  }
+}

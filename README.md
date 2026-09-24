@@ -6,18 +6,34 @@
 ל-`efi@almogsea.co.il` — בלי שום פעולה נוספת מצד הנהג. הורדת ה-PDF וכפתור
 ה-mailto הישנים עדיין קיימים כאופציה נוספת/גיבוי ידני.
 
+**בתהליך מעבר מ-Render ל-Cloudflare Workers** (כדי להיפטר מ"התעוררות" השרת
+אחרי חוסר פעילות) — ראו [CLOUDFLARE.md](CLOUDFLARE.md) למדריך הפריסה המלא.
+המדריך הזה (README.md) עדיין מתאר את ההרצה/פריסה ב-Render, ששניהם עובדים
+במקביל עד שה-Cloudflare מאומת ב-100%.
+
 ## מבנה הפרויקט
 
 ```
-public/exam.html     — הפרונטאנד (העיצוב במיתוג ALMOG Logistics Group + שליחה אוטומטית לשרת)
+public/index.html    — הפרונטאנד (העיצוב במיתוג ALMOG Logistics Group + שליחה אוטומטית לשרת)
 public/assets/        — לוגו ALMOG (almog-logo.png, almog-icon.png)
+
+--- גרסת Render (Express, עדיין פעילה) ---
 server/index.js      — Express app + endpoint POST /api/submit
-server/questions.js  — קורא את מאגר השאלות (QUESTIONS_HE) ישירות מתוך public/exam.html,
+server/questions.js  — קורא את מאגר השאלות (QUESTIONS_HE) ישירות מתוך public/index.html,
                         כך שאין כפילות/סטייה אפשרית בין הלקוח לשרת
 server/pdf.js         — בונה את ה-PDF בצד השרת עם Puppeteer (מדפיס HTML אמיתי, לא צילום מסך)
 server/mailer.js      — שולח את המייל דרך Resend (HTTP API, לא SMTP)
 server/storage.js     — לוג גיבוי מצטבר ל-data/submissions.csv
 data/                  — נוצר אוטומטית, לא נכנס ל-git (מכיל מידע אישי על נהגים)
+
+--- גרסת Cloudflare Workers (ראו CLOUDFLARE.md) ---
+worker/index.js        — ה-Worker: routing + POST /api/submit
+worker/pdf.js           — בונה את ה-PDF עם Cloudflare Browser Run (@cloudflare/puppeteer)
+worker/mailer.js        — זהה בעיקרון ל-server/mailer.js, מקבל env במקום process.env
+worker/storage.js       — גיבוי הגשות ל-Cloudflare KV במקום CSV
+worker/generated/       — נוצר אוטומטית ע"י scripts/build-worker-data.js, לא נכנס ל-git
+scripts/build-worker-data.js — שלב build: מייצא את מאגר השאלות + הגופנים לתוך worker/generated/
+wrangler.jsonc          — קונפיגורציית הפריסה ל-Cloudflare
 ```
 
 מאגר השאלות, התרגומים ללשונות, לוגיקת הניקוד וה-UI **לא שונו** — רק נוספה שכבת

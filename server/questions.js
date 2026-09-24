@@ -1,17 +1,17 @@
 // Single source of truth for the question bank: parsed directly out of
-// public/exam.html (the QUESTIONS_HE array) so the server can never drift
+// public/index.html (the QUESTIONS_HE array) so the server can never drift
 // from the exam the driver actually takes.
 const fs = require('fs');
 const path = require('path');
 
-const EXAM_HTML_PATH = path.join(__dirname, '..', 'public', 'exam.html');
+const EXAM_HTML_PATH = path.join(__dirname, '..', 'public', 'index.html');
 const PASS_SCORE = 100;
 
 function getQuestions() {
   const html = fs.readFileSync(EXAM_HTML_PATH, 'utf8');
   const match = html.match(/var QUESTIONS_HE\s*=\s*(\[[\s\S]*?\]);/);
   if (!match) {
-    throw new Error('Could not find QUESTIONS_HE in public/exam.html — question bank parsing failed.');
+    throw new Error('Could not find QUESTIONS_HE in public/index.html — question bank parsing failed.');
   }
 
   let questions;
@@ -21,7 +21,7 @@ function getQuestions() {
     // user input.
     questions = new Function('return ' + match[1])();
   } catch (err) {
-    throw new Error('Failed to parse QUESTIONS_HE from public/exam.html: ' + err.message);
+    throw new Error('Failed to parse QUESTIONS_HE from public/index.html: ' + err.message);
   }
 
   if (!Array.isArray(questions) || questions.length !== 20) {

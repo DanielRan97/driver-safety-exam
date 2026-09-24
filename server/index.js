@@ -9,7 +9,7 @@ const { sendResultEmail } = require('./mailer');
 const { logSubmission } = require('./storage');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const QUESTIONS = getQuestions(); // parsed once at boot from public/exam.html
+const QUESTIONS = getQuestions(); // parsed once at boot from public/index.html
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,7 +18,7 @@ app.use(express.json({ limit: '200kb' }));
 app.use(express.static(PUBLIC_DIR));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'exam.html'));
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.post('/api/submit', async (req, res) => {

@@ -1,0 +1,4 @@
+# Local secrets for `npm run dev` (wrangler dev). Copy to `.dev.vars`
+# (gitignored, never commit it). Non-secret vars (MAIL_TO, RESEND_FROM)
+# already live in wrangler.jsonc — only the secret goes here.
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
