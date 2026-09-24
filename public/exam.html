@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>מבחן בטיחות – נהגי טאג</title>
+<link rel="icon" href="/assets/almog-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,33 +12,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --navy:#0F2438;
-    --navy-deep:#0A1826;
+    /* ALMOG Logistics Group brand tokens, sampled from the logo */
+    --almog-purple:#1E0080;
+    --almog-blue:#1450E0;
+    --almog-light-blue:#10A5FD;
+    --almog-gradient: linear-gradient(90deg, var(--almog-purple) 0%, var(--almog-blue) 55%, var(--almog-light-blue) 100%);
+    --almog-tint:#EEF2FF;
     --white:#FFFFFF;
-    --yellow:#FFC63C;
-    --yellow-dark:#D9A82A;
-    --ink:#16212C;
-    --muted:#64707C;
-    --line:#E3E7EA;
+    --ink:#1A1D29;
+    --muted:#64708C;
+    --line:#E1E5F0;
+    --bg:#F5F7FB;
     --danger:#C6432A;
     --danger-bg:#FBEAE6;
-    --success:#2E7D4F;
-    --success-bg:#E9F3EC;
     --radius:12px;
     --font: 'Heebo', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
     color-scheme: light;
   }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){ --navy:#0B1D2E; --navy-deep:#071320; }
-  }
-  :root[data-theme="dark"]{ --navy:#0B1D2E; --navy-deep:#071320; }
 
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
     margin:0;
     font-family:var(--font);
-    background:var(--navy);
+    background:var(--bg);
     color:var(--ink);
     min-height:100%;
     padding-top:env(safe-area-inset-top,0px);
@@ -59,34 +57,46 @@
     background:var(--white);
     border-radius:var(--radius);
     overflow:hidden;
-    box-shadow:0 20px 50px rgba(0,0,0,.35);
+    border:1px solid var(--line);
+    box-shadow:0 12px 32px rgba(20,15,70,.08);
   }
 
   .card-head{
-    background:var(--navy-deep);
-    color:var(--white);
-    padding:20px 24px;
+    background:var(--white);
+    color:var(--ink);
+    padding:16px 24px;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:14px;
-    border-bottom:4px solid var(--yellow);
+    border-bottom:1px solid var(--line);
+    position:relative;
   }
-  .card-head-left{display:flex;align-items:center;gap:14px;min-width:0;}
-  .card-head svg{flex:0 0 auto;}
+  .card-head::after{
+    content:"";
+    position:absolute;
+    inset-inline:0;
+    bottom:-1px;
+    height:3px;
+    background:var(--almog-gradient);
+  }
+  .card-head-left{display:flex;align-items:center;gap:12px;min-width:0;}
+  .brand-logo{display:block;height:32px;width:auto;flex:0 0 auto;}
+  @media (max-width:480px){ .brand-logo{height:26px;} }
   .card-head h1{
-    font-size:18px;
-    font-weight:700;
+    font-size:14px;
+    font-weight:600;
     margin:0;
-    line-height:1.35;
+    line-height:1.3;
+    color:var(--muted);
   }
-  @media (max-width:480px){ .card-head h1{font-size:16px;} }
+  @media (max-width:480px){ .card-head h1{display:none;} }
 
   #lang-select{
     flex:0 0 auto;
-    background:rgba(255,255,255,.08);
-    color:var(--white);
-    border:1.5px solid rgba(255,255,255,.35);
+    background:var(--white);
+    color:var(--ink);
+    border:1.5px solid var(--line);
     border-radius:8px;
     padding:8px 10px;
     font-family:var(--font);
@@ -94,10 +104,11 @@
     font-weight:600;
     cursor:pointer;
   }
-  #lang-select option{color:#16212C;}
+  #lang-select:focus{ outline:none; border-color:var(--almog-blue); box-shadow:0 0 0 3px var(--almog-tint); }
+  #lang-select option{color:var(--ink);}
 
   .card-body{padding:24px;}
-  @media (max-width:480px){ .card-body{padding:18px;} .card-head{padding:16px;} }
+  @media (max-width:480px){ .card-body{padding:18px;} .card-head{padding:12px 16px;} }
 
   /* ---- details form ---- */
   .field{margin-bottom:16px;}
@@ -117,15 +128,19 @@
     border:2px solid var(--line);
     background:#fff;
     color:var(--ink);
-    transition:border-color .15s;
+    transition:border-color .15s, box-shadow .15s;
   }
   .field input:focus{
     outline:none;
-    border-color:var(--navy);
+    border-color:var(--almog-blue);
+    box-shadow:0 0 0 3px var(--almog-tint);
   }
   .field.has-error input{
     border-color:var(--danger);
     background:var(--danger-bg);
+  }
+  .field.has-error input:focus{
+    box-shadow:0 0 0 3px var(--danger-bg);
   }
   .field .err-msg{
     display:none;
@@ -147,18 +162,20 @@
     width:100%;
     padding:15px 18px;
     font-family:var(--font);
-    font-size:17px;
+    font-size:16px;
     font-weight:700;
     border-radius:10px;
     border:none;
     cursor:pointer;
-    transition:transform .08s, filter .15s;
+    transition:transform .08s, filter .15s, box-shadow .15s;
   }
   .btn:active{transform:scale(.98);}
-  .btn-primary{background:var(--yellow);color:var(--navy-deep);}
-  .btn-primary:hover{filter:brightness(1.05);}
-  .btn-primary:disabled{background:#EADFC4;color:#9A9686;cursor:not-allowed;}
-  .btn-outline{background:transparent;color:var(--navy);border:2px solid var(--line);}
+  .btn-primary{background:var(--almog-gradient);color:var(--white);box-shadow:0 6px 16px rgba(20,80,224,.25);}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-primary:focus-visible{outline:2px solid var(--almog-purple);outline-offset:2px;}
+  .btn-primary:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;box-shadow:none;filter:none;}
+  .btn-outline{background:var(--white);color:var(--almog-blue);border:2px solid var(--almog-blue);}
+  .btn-outline:hover{background:var(--almog-tint);}
 
   .top-alert{
     display:none;
@@ -183,9 +200,9 @@
     z-index:5;
   }
   @media (max-width:480px){ .progress-wrap{padding:12px 18px 8px;} }
-  .progress-text{font-size:14px;font-weight:700;color:var(--navy-deep);margin-bottom:8px;}
+  .progress-text{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px;}
   .progress-bar-bg{background:var(--line);border-radius:6px;height:8px;overflow:hidden;}
-  .progress-bar-fill{background:var(--yellow-dark);height:100%;width:0%;transition:width .2s;}
+  .progress-bar-fill{background:var(--almog-gradient);height:100%;width:0%;transition:width .2s;}
 
   .qlist{padding:22px 24px 4px;}
   @media (max-width:480px){ .qlist{padding:16px 18px 4px;} }
@@ -202,8 +219,8 @@
     display:inline-block;
     font-size:13px;
     font-weight:800;
-    color:var(--navy-deep);
-    background:var(--yellow);
+    color:var(--almog-purple);
+    background:var(--almog-tint);
     border-radius:6px;
     padding:2px 9px;
     margin-bottom:10px;
@@ -223,9 +240,9 @@
     background:#fff;
     transition:border-color .12s, background .12s;
   }
-  .opt:hover{border-color:#B9C6D3;}
-  .opt input{margin-top:3px;flex:0 0 auto;width:19px;height:19px;accent-color:var(--navy);}
-  .opt.selected{border-color:var(--navy);background:#EFF3F7;font-weight:600;}
+  .opt:hover{border-color:var(--almog-light-blue);}
+  .opt input{margin-top:3px;flex:0 0 auto;width:19px;height:19px;accent-color:var(--almog-blue);}
+  .opt.selected{border-color:var(--almog-blue);background:var(--almog-tint);font-weight:600;}
 
   .footer-bar{
     position:sticky;
@@ -245,20 +262,21 @@
     margin:10px auto 18px;
     border:8px solid var(--line);
   }
-  .score-circle.pass{border-color:var(--success);background:var(--success-bg);}
+  .score-circle.pass{border-color:var(--almog-blue);background:var(--almog-tint);}
   .score-circle.fail{border-color:var(--danger);background:var(--danger-bg);}
   .score-num{font-size:42px;font-weight:800;line-height:1;}
-  .score-circle.pass .score-num{color:var(--success);}
+  .score-circle.pass .score-num{color:var(--almog-purple);}
   .score-circle.fail .score-num{color:var(--danger);}
   .score-sub{font-size:13px;color:var(--muted);margin-top:4px;}
   .result-title{font-size:20px;font-weight:800;margin:0 0 6px;}
-  .result-title.pass{color:var(--success);}
+  .result-title.pass{color:var(--almog-purple);}
   .result-title.fail{color:var(--danger);}
   .result-desc{color:var(--muted);font-size:15px;margin:0 0 22px;line-height:1.5;}
   .result-actions{display:flex;flex-direction:column;gap:10px;}
   .result-summary{
     text-align:start;
-    background:#F7F9FA;
+    background:var(--bg);
+    border:1px solid var(--line);
     border-radius:10px;
     padding:14px 16px;
     margin-bottom:20px;
@@ -281,9 +299,9 @@
     color:#16212C;
     direction:rtl;
   }
-  #printable .p-header{background:#0A1826;color:#fff;padding:26px 34px;border-bottom:6px solid #FFC63C;}
+  #printable .p-header{background:linear-gradient(90deg,#1E0080,#1450E0 55%,#10A5FD);color:#fff;padding:26px 34px;}
   #printable .p-header h2{margin:0 0 4px;font-size:22px;}
-  #printable .p-header p{margin:0;color:#B9C6D3;font-size:13px;}
+  #printable .p-header p{margin:0;color:rgba(255,255,255,.8);font-size:13px;}
   #printable .p-details{padding:20px 34px;border-bottom:1px solid #E3E7EA;}
   #printable .p-details table{width:100%;border-collapse:collapse;font-size:13px;}
   #printable .p-details td{padding:4px 0;}
@@ -291,11 +309,11 @@
   #printable .p-details td.v{font-weight:700;}
   #printable .p-score{padding:18px 34px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #E3E7EA;}
   #printable .p-score .num{font-size:34px;font-weight:800;}
-  #printable .p-score .num.pass{color:#2E7D4F;}
+  #printable .p-score .num.pass{color:#1E0080;}
   #printable .p-score .num.fail{color:#C6432A;}
   #printable .p-score .lbl{font-size:14px;font-weight:700;}
   #printable .p-q{padding:14px 34px;border-bottom:1px solid #EEF1F2;}
-  #printable .p-q .qn{font-size:12px;font-weight:800;background:#FFC63C;color:#0A1826;border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:6px;}
+  #printable .p-q .qn{font-size:12px;font-weight:800;background:#EEF2FF;color:#1E0080;border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:6px;}
   #printable .p-q .qt{font-size:13.5px;font-weight:600;margin-bottom:8px;line-height:1.5;}
   #printable .p-q .oa{font-size:12.5px;padding:5px 10px;border-radius:6px;margin-bottom:4px;border:1px solid #E3E7EA;}
   #printable .p-q .oa.correct{background:#E9F3EC;border-color:#2E7D4F;color:#2E7D4F;font-weight:700;}
@@ -309,13 +327,7 @@
   <div class="card">
     <div class="card-head">
       <div class="card-head-left">
-        <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 39c3-2 6-2 9 0s6 2 9 0 6-2 9 0 6 2 9 0 6-2 9 0" stroke="#FFC63C" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M14 39V16l8-6 8 6v23" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-          <path d="M9 16h30" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
-          <path d="M34 16v5" stroke="#FFC63C" stroke-width="2" stroke-linecap="round"/>
-          <rect x="28.5" y="21" width="11" height="8" rx="1" stroke="#FFC63C" stroke-width="2"/>
-        </svg>
+        <img class="brand-logo" src="/assets/almog-logo.png" alt="ALMOG Logistics Group" width="900" height="338">
         <h1 id="txt-header-title">מבחן בטיחות – נהגי טאג</h1>
       </div>
       <select id="lang-select" aria-label="שפה">
@@ -399,13 +411,13 @@
           </div>
           <h2 class="result-title" id="result-title"></h2>
           <p class="result-desc" id="result-desc"></p>
-          <div id="submit-status" style="font-size:13px;font-weight:700;margin:-6px 0 18px;padding:10px 14px;border-radius:9px;background:#F7F9FA;color:var(--muted);"></div>
+          <div id="submit-status" style="font-size:13px;font-weight:700;margin:-6px 0 18px;padding:10px 14px;border-radius:9px;background:var(--bg);color:var(--muted);"></div>
           <div class="result-summary" id="result-summary"></div>
           <div class="result-actions">
             <button class="btn btn-primary" id="btn-pdf"></button>
           </div>
 
-          <div id="email-step" class="hidden" style="margin-top:20px;background:#F7F9FA;border:2px solid var(--line);border-radius:11px;padding:16px 18px;">
+          <div id="email-step" class="hidden" style="margin-top:20px;background:var(--bg);border:2px solid var(--line);border-radius:11px;padding:16px 18px;">
             <div id="email-step-title" style="font-weight:800;font-size:15px;margin-bottom:6px;"></div>
             <div id="email-step-desc" style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:14px;"></div>
             <a id="btn-mailto" class="btn btn-outline" href="#" style="text-decoration:none;"></a>
@@ -502,10 +514,10 @@
         resultDescPass:function(c,t,p){return "ענית נכון על "+c+" מתוך "+t+" שאלות. ציון עובר: "+p+".";},
         resultDescFail:function(c,t,p){return "ענית נכון על "+c+" מתוך "+t+" שאלות. ציון עובר: "+p+". מומלץ לעבור על החומר שוב.";},
         summaryName:"שם", summaryId:"ת.ז.", summaryEmpNum:"מס׳ עובד", summaryDate:"תאריך",
-        btnPdf:"📄 הורדת קובץ PDF עם התוצאה המלאה", btnPdfPreparing:"מכין קובץ...",
+        btnPdf:"הורדת קובץ PDF עם התוצאה המלאה", btnPdfPreparing:"מכין קובץ...",
         emailStepTitle:"שלב אחרון – שליחת התוצאה",
         emailStepDesc:"הקובץ שהורדת נמצא כעת בתיקיית ההורדות במכשיר שלך. לחצו על הכפתור למטה כדי לפתוח מייל מוכן מראש, צרפו את קובץ ה-PDF שהורדתם ולחצו שליחה.",
-        btnMailto:"✉️ פתיחת מייל לשליחת התוצאה",
+        btnMailto:"פתיחת מייל לשליחת התוצאה",
         submitSending:"שולח את התוצאה אוטומטית...",
         submitSuccess:"התוצאה נשלחה בהצלחה במייל.",
         submitError:"אירעה שגיאה בשליחה האוטומטית של התוצאה. ניתן להוריד את קובץ ה-PDF ולשלוח אותו ידנית באמצעות הכפתור למטה."
@@ -532,10 +544,10 @@
         resultDescPass:function(c,t,p){return "You answered "+c+" out of "+t+" questions correctly. Passing score: "+p+".";},
         resultDescFail:function(c,t,p){return "You answered "+c+" out of "+t+" questions correctly. Passing score: "+p+". We recommend reviewing the material again.";},
         summaryName:"Name", summaryId:"ID number", summaryEmpNum:"Employee #", summaryDate:"Date",
-        btnPdf:"📄 Download PDF with full result", btnPdfPreparing:"Preparing file...",
+        btnPdf:"Download PDF with full result", btnPdfPreparing:"Preparing file...",
         emailStepTitle:"Last step – send the result",
         emailStepDesc:"The file you downloaded is now in your device's downloads folder. Click the button below to open a pre-filled email, attach the PDF you downloaded, and click send.",
-        btnMailto:"✉️ Open email to send the result",
+        btnMailto:"Open email to send the result",
         submitSending:"Sending the result automatically...",
         submitSuccess:"The result was sent successfully by email.",
         submitError:"An error occurred while sending the result automatically. You can download the PDF file and send it manually using the button below."
@@ -603,10 +615,10 @@
         resultDescPass:function(c,t,p){return "أجبت بشكل صحيح على "+c+" من "+t+" أسئلة. علامة النجاح: "+p+".";},
         resultDescFail:function(c,t,p){return "أجبت بشكل صحيح على "+c+" من "+t+" أسئلة. علامة النجاح: "+p+". يُنصح بمراجعة المادة مرة أخرى.";},
         summaryName:"الاسم", summaryId:"رقم الهوية", summaryEmpNum:"الرقم الوظيفي", summaryDate:"التاريخ",
-        btnPdf:"📄 تحميل ملف PDF بالنتيجة الكاملة", btnPdfPreparing:"جارٍ إعداد الملف...",
+        btnPdf:"تحميل ملف PDF بالنتيجة الكاملة", btnPdfPreparing:"جارٍ إعداد الملف...",
         emailStepTitle:"الخطوة الأخيرة – إرسال النتيجة",
         emailStepDesc:"الملف الذي حمّلته موجود الآن في مجلد التنزيلات في جهازك. اضغط على الزر أدناه لفتح بريد إلكتروني معبأ مسبقًا، أرفق ملف PDF الذي حمّلته، واضغط إرسال.",
-        btnMailto:"✉️ فتح البريد الإلكتروني لإرسال النتيجة",
+        btnMailto:"فتح البريد الإلكتروني لإرسال النتيجة",
         submitSending:"جارٍ إرسال النتيجة تلقائيًا...",
         submitSuccess:"تم إرسال النتيجة بنجاح عبر البريد الإلكتروني.",
         submitError:"حدث خطأ أثناء الإرسال التلقائي للنتيجة. يمكنك تنزيل ملف PDF وإرساله يدويًا باستخدام الزر أدناه."
@@ -674,10 +686,10 @@
         resultDescPass:function(c,t,p){return "Вы правильно ответили на "+c+" из "+t+" вопросов. Проходной балл: "+p+".";},
         resultDescFail:function(c,t,p){return "Вы правильно ответили на "+c+" из "+t+" вопросов. Проходной балл: "+p+". Рекомендуем повторить материал.";},
         summaryName:"Имя", summaryId:"Удостоверение", summaryEmpNum:"Таб. №", summaryDate:"Дата",
-        btnPdf:"📄 Скачать PDF с полным результатом", btnPdfPreparing:"Подготовка файла...",
+        btnPdf:"Скачать PDF с полным результатом", btnPdfPreparing:"Подготовка файла...",
         emailStepTitle:"Последний шаг – отправка результата",
         emailStepDesc:"Скачанный файл теперь находится в папке загрузок вашего устройства. Нажмите кнопку ниже, чтобы открыть заранее заполненное письмо, прикрепите скачанный PDF и нажмите «отправить».",
-        btnMailto:"✉️ Открыть письмо для отправки результата",
+        btnMailto:"Открыть письмо для отправки результата",
         submitSending:"Автоматическая отправка результата...",
         submitSuccess:"Результат успешно отправлен по электронной почте.",
         submitError:"Произошла ошибка при автоматической отправке результата. Вы можете скачать PDF-файл и отправить его вручную с помощью кнопки ниже."
@@ -745,10 +757,10 @@
         resultDescPass:function(c,t,p){return "您在 "+t+" 题中答对了 "+c+" 题。及格分数："+p+"。";},
         resultDescFail:function(c,t,p){return "您在 "+t+" 题中答对了 "+c+" 题。及格分数："+p+"。建议重新复习相关内容。";},
         summaryName:"姓名", summaryId:"身份证号", summaryEmpNum:"员工编号", summaryDate:"日期",
-        btnPdf:"📄 下载完整结果的PDF文件", btnPdfPreparing:"正在生成文件...",
+        btnPdf:"下载完整结果的PDF文件", btnPdfPreparing:"正在生成文件...",
         emailStepTitle:"最后一步 – 发送结果",
         emailStepDesc:"您下载的文件现在位于设备的下载文件夹中。点击下方按钮打开预先填写好的邮件，附上您下载的PDF文件，然后点击发送。",
-        btnMailto:"✉️ 打开邮件发送结果",
+        btnMailto:"打开邮件发送结果",
         submitSending:"正在自动发送结果...",
         submitSuccess:"结果已成功通过邮件发送。",
         submitError:"自动发送结果时出错。您可以下载PDF文件，并使用下方按钮手动发送。"
@@ -816,10 +828,10 @@
         resultDescPass:function(c,t,p){return "Você acertou "+c+" de "+t+" perguntas. Nota mínima para aprovação: "+p+".";},
         resultDescFail:function(c,t,p){return "Você acertou "+c+" de "+t+" perguntas. Nota mínima para aprovação: "+p+". Recomendamos revisar o material novamente.";},
         summaryName:"Nome", summaryId:"Identidade", summaryEmpNum:"Nº de funcionário", summaryDate:"Data",
-        btnPdf:"📄 Baixar PDF com o resultado completo", btnPdfPreparing:"Preparando arquivo...",
+        btnPdf:"Baixar PDF com o resultado completo", btnPdfPreparing:"Preparando arquivo...",
         emailStepTitle:"Última etapa – enviar o resultado",
         emailStepDesc:"O arquivo que você baixou está agora na pasta de downloads do seu dispositivo. Clique no botão abaixo para abrir um e-mail pré-preenchido, anexe o PDF baixado e clique em enviar.",
-        btnMailto:"✉️ Abrir e-mail para enviar o resultado",
+        btnMailto:"Abrir e-mail para enviar o resultado",
         submitSending:"Enviando o resultado automaticamente...",
         submitSuccess:"O resultado foi enviado com sucesso por e-mail.",
         submitError:"Ocorreu um erro ao enviar o resultado automaticamente. Você pode baixar o arquivo PDF e enviá-lo manualmente usando o botão abaixo."
@@ -1136,8 +1148,8 @@
     var el = document.getElementById('submit-status');
     if(!el) return;
     el.textContent = text;
-    el.style.color = kind === 'error' ? 'var(--danger)' : (kind === 'success' ? 'var(--success)' : 'var(--muted)');
-    el.style.background = kind === 'error' ? 'var(--danger-bg)' : (kind === 'success' ? 'var(--success-bg)' : '#F7F9FA');
+    el.style.color = kind === 'error' ? 'var(--danger)' : (kind === 'success' ? 'var(--almog-purple)' : 'var(--muted)');
+    el.style.background = kind === 'error' ? 'var(--danger-bg)' : (kind === 'success' ? 'var(--almog-tint)' : 'var(--bg)');
   }
 
   function submitResultToServer(){

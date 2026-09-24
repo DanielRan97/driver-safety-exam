@@ -33,9 +33,9 @@ const PRINTABLE_CSS = `
   ${FONT_FACE_CSS}
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Heebo', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;color:#16212C;direction:rtl;background:#fff;}
-  .p-header{background:#0A1826;color:#fff;padding:26px 34px;border-bottom:6px solid #FFC63C;}
+  .p-header{background:linear-gradient(90deg,#1E0080,#1450E0 55%,#10A5FD);color:#fff;padding:26px 34px;}
   .p-header h2{margin:0 0 4px;font-size:22px;}
-  .p-header p{margin:0;color:#B9C6D3;font-size:13px;}
+  .p-header p{margin:0;color:rgba(255,255,255,.8);font-size:13px;}
   .p-details{padding:20px 34px;border-bottom:1px solid #E3E7EA;}
   .p-details table{width:100%;border-collapse:collapse;font-size:13px;}
   .p-details td{padding:4px 0;}
@@ -43,11 +43,11 @@ const PRINTABLE_CSS = `
   .p-details td.v{font-weight:700;}
   .p-score{padding:18px 34px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #E3E7EA;}
   .p-score .num{font-size:34px;font-weight:800;}
-  .p-score .num.pass{color:#2E7D4F;}
+  .p-score .num.pass{color:#1E0080;}
   .p-score .num.fail{color:#C6432A;}
   .p-score .lbl{font-size:14px;font-weight:700;}
   .p-q{padding:14px 34px;border-bottom:1px solid #EEF1F2;}
-  .p-q .qn{font-size:12px;font-weight:800;background:#FFC63C;color:#0A1826;border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:6px;}
+  .p-q .qn{font-size:12px;font-weight:800;background:#EEF2FF;color:#1E0080;border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:6px;}
   .p-q .qt{font-size:13.5px;font-weight:600;margin-bottom:8px;line-height:1.5;}
   .p-q .oa{font-size:12.5px;padding:5px 10px;border-radius:6px;margin-bottom:4px;border:1px solid #E3E7EA;}
   .p-q .oa.correct{background:#E9F3EC;border-color:#2E7D4F;color:#2E7D4F;font-weight:700;}
