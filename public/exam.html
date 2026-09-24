@@ -135,6 +135,16 @@
     border-color:var(--almog-blue);
     box-shadow:0 0 0 3px var(--almog-tint);
   }
+  /* iOS Safari can push the native date-picker icon past the field's
+     right edge in an RTL page unless the widget itself is pinned LTR
+     and given room to sit inside the border. */
+  input[type="date"]{
+    min-width:0;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator{
+    margin-inline-start:6px;
+    flex-shrink:0;
+  }
   .field.has-error input{
     border-color:var(--danger);
     background:var(--danger-bg);
@@ -380,7 +390,7 @@
 
         <div class="field" data-field="date">
           <label for="f-date" id="lbl-date"></label>
-          <input id="f-date" type="date">
+          <input id="f-date" type="date" dir="ltr">
           <div class="err-msg" id="err-date"></div>
         </div>
 
