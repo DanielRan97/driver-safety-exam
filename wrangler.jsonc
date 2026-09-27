@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "driver-safety-exam",
   "main": "worker/index.js",
-  "compatibility_date": "2026-09-24",
+  "compatibility_date": "2026-08-22",
   "compatibility_flags": ["nodejs_compat"],
 
   // Serves public/index.html + public/assets/* directly from Cloudflare's
@@ -21,14 +21,25 @@
     "binding": "MYBROWSER"
   },
 
-  // Backup of every submission (replaces the CSV file the Render version
-  // wrote to local disk). Create this namespace first with:
-  //   wrangler kv namespace create SUBMISSIONS_KV
-  // then paste the returned id below.
+  // Employee database + exam attempts (see migrations/). This is now the
+  // authoritative store — it superseded the SUBMISSIONS_KV backup below,
+  // which is kept only because it's harmless to leave configured.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "driver-safety-exam-db",
+      "database_id": "20012407-66f9-43b9-b940-5a1857466249",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Superseded by D1 (see above) — every submission is now stored durably
+  // in exam_attempts before email is even attempted. Left configured
+  // since it's unused-but-harmless; worker/storage.js is no longer called.
   "kv_namespaces": [
     {
       "binding": "SUBMISSIONS_KV",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+      "id": "a76916b6113243408cc2f350029a7acf"
     }
   ],
 

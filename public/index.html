@@ -423,6 +423,7 @@
         </div>
         <div style="padding:0 24px;">
           <div id="quiz-alert" class="top-alert" style="margin-top:16px;"></div>
+          <button class="btn btn-outline hidden" id="btn-retry-submit" style="margin-top:-4px;margin-bottom:16px;"></button>
         </div>
         <div class="qlist" id="qlist"></div>
         <div class="footer-bar">
@@ -548,7 +549,10 @@
         btnMailto:"פתיחת מייל לשליחת התוצאה",
         submitSending:"שולח את התוצאה אוטומטית...",
         submitSuccess:"התוצאה נשלחה בהצלחה במייל.",
-        submitError:"אירעה שגיאה בשליחה האוטומטית של התוצאה. ניתן להוריד את קובץ ה-PDF ולשלוח אותו ידנית באמצעות הכפתור למטה."
+        submitError:"אירעה שגיאה בשליחת התוצאה. ניתן ללחוץ שוב כדי לנסות מחדש.",
+        verifyingId:"מאמת פרטים...",
+        btnRetrySubmit:"נסה שוב לשלוח",
+        alreadyCompleted:"כבר השלמת בהצלחה את מבחן הבטיחות. אם לדעתך זו טעות, פנה למנהל."
       },
       questions: QUESTIONS_HE
     },
@@ -578,7 +582,10 @@
         btnMailto:"Open email to send the result",
         submitSending:"Sending the result automatically...",
         submitSuccess:"The result was sent successfully by email.",
-        submitError:"An error occurred while sending the result automatically. You can download the PDF file and send it manually using the button below."
+        submitError:"An error occurred while sending the result. You can press again to retry.",
+        verifyingId:"Verifying details...",
+        btnRetrySubmit:"Retry sending",
+        alreadyCompleted:"You have already successfully completed the safety exam. If you believe this is a mistake, contact your manager."
       },
       questions:[
         {q:"Loading has finished under the ship crane (STS). The quay signalman moved the cone and signaled you to exit. What must you make sure of before starting to drive?",
@@ -649,7 +656,10 @@
         btnMailto:"فتح البريد الإلكتروني لإرسال النتيجة",
         submitSending:"جارٍ إرسال النتيجة تلقائيًا...",
         submitSuccess:"تم إرسال النتيجة بنجاح عبر البريد الإلكتروني.",
-        submitError:"حدث خطأ أثناء الإرسال التلقائي للنتيجة. يمكنك تنزيل ملف PDF وإرساله يدويًا باستخدام الزر أدناه."
+        submitError:"حدث خطأ أثناء إرسال النتيجة. يمكنك الضغط مرة أخرى للمحاولة مجددًا.",
+        verifyingId:"جارٍ التحقق من البيانات...",
+        btnRetrySubmit:"إعادة محاولة الإرسال",
+        alreadyCompleted:"لقد أكملت بالفعل اختبار السلامة بنجاح. إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع المدير."
       },
       questions:[
         {q:"انتهى التحميل أسفل رافعة السفينة (STS). قام مشير الرصيف بتحريك المخروط وأشار لك بالخروج. ما الذي يجب عليك التأكد منه قبل بدء القيادة؟",
@@ -720,7 +730,10 @@
         btnMailto:"Открыть письмо для отправки результата",
         submitSending:"Автоматическая отправка результата...",
         submitSuccess:"Результат успешно отправлен по электронной почте.",
-        submitError:"Произошла ошибка при автоматической отправке результата. Вы можете скачать PDF-файл и отправить его вручную с помощью кнопки ниже."
+        submitError:"Произошла ошибка при отправке результата. Нажмите ещё раз, чтобы повторить попытку.",
+        verifyingId:"Проверка данных...",
+        btnRetrySubmit:"Повторить отправку",
+        alreadyCompleted:"Вы уже успешно прошли экзамен по технике безопасности. Если считаете, что это ошибка, обратитесь к руководителю."
       },
       questions:[
         {q:"Погрузка под портальным краном (STS) завершена. Сигнальщик причала убрал конус и подал вам знак на выезд. Что вы должны проверить перед началом движения?",
@@ -791,7 +804,10 @@
         btnMailto:"打开邮件发送结果",
         submitSending:"正在自动发送结果...",
         submitSuccess:"结果已成功通过邮件发送。",
-        submitError:"自动发送结果时出错。您可以下载PDF文件，并使用下方按钮手动发送。"
+        submitError:"发送结果时出错。您可以再次点击重试。",
+        verifyingId:"正在验证信息...",
+        btnRetrySubmit:"重新发送",
+        alreadyCompleted:"您已成功完成安全考试。如果您认为这是错误，请联系经理。"
       },
       questions:[
         {q:"船吊（STS）下方的装货作业已完成。码头信号员移开了锥筒并示意你可以驶出。驶出前你必须确认什么？",
@@ -862,7 +878,10 @@
         btnMailto:"Abrir e-mail para enviar o resultado",
         submitSending:"Enviando o resultado automaticamente...",
         submitSuccess:"O resultado foi enviado com sucesso por e-mail.",
-        submitError:"Ocorreu um erro ao enviar o resultado automaticamente. Você pode baixar o arquivo PDF e enviá-lo manualmente usando o botão abaixo."
+        submitError:"Ocorreu um erro ao enviar o resultado. Você pode clicar novamente para tentar de novo.",
+        verifyingId:"Verificando dados...",
+        btnRetrySubmit:"Tentar enviar novamente",
+        alreadyCompleted:"Você já concluiu o exame de segurança com sucesso. Se acredita que isso é um engano, entre em contato com o gerente."
       },
       questions:[
         {q:"O carregamento terminou sob o guindaste do navio (STS). O sinaleiro do cais moveu o cone e sinalizou para você sair. O que você deve verificar antes de começar a dirigir?",
@@ -946,13 +965,22 @@
     return isValidIsraeliId(v) || isValidChineseId(v);
   }
 
+  // The ID field no longer hard-requires an Israeli/Chinese checksum —
+  // the server looks it up against the employee database and decides
+  // employee-vs-guest either way (guests, e.g. visitors at the port, may
+  // not hold an ID in either format). We still require *something*
+  // reasonable was typed.
+  function isValidIdOrGuest(v){
+    return v.trim().length >= 4;
+  }
+
   // ---------- fields ----------
   var fields = {
     first: {el: document.getElementById('f-first'), validate: isValidName},
     last:  {el: document.getElementById('f-last'),  validate: isValidName},
     email: {el: document.getElementById('f-email'), validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())},
-    id:    {el: document.getElementById('f-id'),    validate: isValidId},
-    empnum:{el: document.getElementById('f-empnum'),validate: v => /^\d{4}$/.test(v.trim())},
+    id:    {el: document.getElementById('f-id'),    validate: isValidIdOrGuest},
+    empnum:{el: document.getElementById('f-empnum'),validate: v => v.trim() === '' || /^\d{4}$/.test(v.trim())},
     date:  {el: document.getElementById('f-date'),  validate: v => v.trim().length > 0}
   };
   var today = new Date();
@@ -1075,6 +1103,13 @@
   }
 
   // ---------- screen 1 -> 2 ----------
+  // The server, not the browser, determines who this is: after the
+  // existing field validation passes, the ID is checked against the
+  // employee database before the quiz opens. A match auto-fills the
+  // verified name/employee number (server-authoritative); no match falls
+  // through to the guest path with whatever the driver typed; a match
+  // that already completed the exam is blocked here, before 20 questions
+  // are wasted.
   document.getElementById('btn-to-quiz').addEventListener('click', function(){
     var allOk = true;
     Object.keys(fields).forEach(function(key){
@@ -1092,12 +1127,64 @@
       return;
     }
     alertBox.classList.remove('show');
+    verifyAndProceed();
+  });
+
+  var isTesterAccount = false;
+
+  function verifyAndProceed(){
+    var btn = document.getElementById('btn-to-quiz');
+    var originalText = btn.textContent;
+    var alertBox = document.getElementById('details-alert');
+    btn.disabled = true;
+    btn.textContent = ui().verifyingId;
+
+    fetch('/api/employee/verify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nationalId: fields.id.el.value.trim() })
+    }).then(function(r){ return r.json(); }).then(function(data){
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      if(data && data.status === 'blocked'){
+        alertBox.textContent = ui().alreadyCompleted;
+        alertBox.classList.add('show');
+        return;
+      }
+      if(data && data.status === 'ok' && data.employee){
+        fields.first.el.value = data.employee.firstName;
+        fields.last.el.value = data.employee.lastName;
+        if(data.employee.employeeNo) fields.empnum.el.value = data.employee.employeeNo;
+        isTesterAccount = !!data.employee.isTester;
+      } else {
+        isTesterAccount = false;
+      }
+      proceedToQuiz();
+    }).catch(function(err){
+      console.error('employee verify failed:', err);
+      btn.disabled = false;
+      btn.textContent = originalText;
+      // Fail open — /api/submit re-verifies authoritatively either way,
+      // so a flaky network here just costs the auto-fill convenience.
+      proceedToQuiz();
+    });
+  }
+
+  function proceedToQuiz(){
     screenDetails.classList.add('hidden');
     screenQuiz.classList.remove('hidden');
     window.scrollTo({top:0, behavior:'instant'});
-  });
+  }
 
   // ---------- screen 2 -> 3 ----------
+  // Per the required submission order: the server scores the exam, stores
+  // the full attempt, generates the PDF and sends the result email BEFORE
+  // this ever returns success — the frontend does not navigate to the
+  // result screen until that whole chain has actually succeeded. A
+  // submissionToken is generated once and reused on every retry, so a
+  // failed email/PDF step can be retried without creating a second
+  // attempt or re-scoring the exam.
   document.getElementById('btn-finish').addEventListener('click', function(){
     var firstMissing = -1;
     answers.forEach(function(a, i){
@@ -1118,31 +1205,115 @@
       return;
     }
     alertBox.classList.remove('show');
-    showResult();
+    submitExam();
   });
 
-  // ---------- screen 3 ----------
-  function showResult(){
+  var submissionToken = null;
+  var localResult = null;
+
+  function computeLocalResult(){
     var correct = 0;
     answers.forEach(function(a, i){ if(a === QUESTIONS_HE[i].correct) correct++; });
-    var score = Math.round(correct / NUM_Q * 100);
-    var passed = score >= PASS_SCORE;
+    localResult = {correct: correct, score: Math.round(correct / NUM_Q * 100)};
+  }
 
+  function submitExam(){
+    if(!submissionToken){
+      submissionToken = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : (String(Date.now()) + Math.random().toString(16).slice(2));
+    }
+    computeLocalResult();
+
+    var finishBtn = document.getElementById('btn-finish');
+    var retryBtn = document.getElementById('btn-retry-submit');
+    var alertBox = document.getElementById('quiz-alert');
+    var u = ui();
+    finishBtn.disabled = true;
+    finishBtn.textContent = u.submitSending;
+    retryBtn.classList.add('hidden');
+    alertBox.classList.remove('show');
+
+    var payload = {
+      first: fields.first.el.value,
+      last: fields.last.el.value,
+      email: fields.email.el.value,
+      id: fields.id.el.value,
+      empnum: fields.empnum.el.value,
+      date: fields.date.el.value,
+      lang: currentLang,
+      answers: answers,
+      submissionToken: submissionToken
+    };
+
+    fetch('/api/submit', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(r){
+      return r.json().catch(function(){ return null; }).then(function(data){ return data; });
+    }).then(function(data){
+      if(data && data.ok){
+        showResult(data.score, data.passed);
+        return;
+      }
+      finishBtn.disabled = false;
+      finishBtn.textContent = ui().btnFinish;
+      if(data && data.error === 'already_completed'){
+        alertBox.textContent = ui().alreadyCompleted;
+        alertBox.classList.add('show');
+        return; // terminal — retaking the exam won't change this
+      }
+      alertBox.textContent = ui().submitError;
+      alertBox.classList.add('show');
+      retryBtn.textContent = ui().btnRetrySubmit;
+      retryBtn.classList.remove('hidden');
+    }).catch(function(err){
+      console.error('submitExam failed:', err);
+      finishBtn.disabled = false;
+      finishBtn.textContent = ui().btnFinish;
+      alertBox.textContent = ui().submitError;
+      alertBox.classList.add('show');
+      retryBtn.textContent = ui().btnRetrySubmit;
+      retryBtn.classList.remove('hidden');
+    });
+  }
+
+  document.getElementById('btn-retry-submit').addEventListener('click', function(){
+    submitExam();
+  });
+
+  // ---------- screen 3 ---------- (only reached after the server confirms success)
+  var lastSubmitKind = null;
+
+  function setSubmitStatus(kind, text){
+    lastSubmitKind = kind;
+    var el = document.getElementById('submit-status');
+    if(!el) return;
+    el.textContent = text;
+    el.style.color = kind === 'error' ? 'var(--danger)' : (kind === 'success' ? 'var(--almog-purple)' : 'var(--muted)');
+    el.style.background = kind === 'error' ? 'var(--danger-bg)' : (kind === 'success' ? 'var(--almog-tint)' : 'var(--bg)');
+  }
+
+  function showResult(serverScore, serverPassed){
     screenQuiz.classList.add('hidden');
     screenResult.classList.remove('hidden');
     window.scrollTo({top:0, behavior:'instant'});
 
     var circle = document.getElementById('score-circle');
-    circle.classList.add(passed ? 'pass' : 'fail');
-    document.getElementById('result-title').classList.add(passed ? 'pass' : 'fail');
+    circle.classList.add(serverPassed ? 'pass' : 'fail');
+    document.getElementById('result-title').classList.add(serverPassed ? 'pass' : 'fail');
 
-    window._examResult = {correct: correct, score: score, passed: passed};
+    window._examResult = {
+      correct: localResult ? localResult.correct : Math.round(serverScore / 100 * NUM_Q),
+      score: serverScore,
+      passed: serverPassed,
+    };
 
     renderResultTexts();
 
     document.getElementById('btn-pdf').textContent = ui().btnPdf;
-
-    submitResultToServer();
+    setSubmitStatus('success', ui().submitSuccess);
   }
 
   // renders the language-dependent texts on the result screen; also called
@@ -1165,50 +1336,6 @@
       '<div><b>' + esc(u.summaryName) + ':</b> ' + esc(fields.first.el.value) + ' ' + esc(fields.last.el.value) + '</div>' +
       '<div><b>' + esc(u.summaryId) + ':</b> ' + esc(fields.id.el.value) + ' &nbsp; <b>' + esc(u.summaryEmpNum) + ':</b> ' + esc(fields.empnum.el.value) + '</div>' +
       '<div><b>' + esc(u.summaryDate) + ':</b> ' + esc(fields.date.el.value) + '</div>';
-  }
-
-  // ---------- automatic server-side submission — sends the email server-side, no driver action needed ----------
-  var API_SUBMIT_URL = '/api/submit';
-  var lastSubmitKind = null;
-
-  function setSubmitStatus(kind, text){
-    lastSubmitKind = kind;
-    var el = document.getElementById('submit-status');
-    if(!el) return;
-    el.textContent = text;
-    el.style.color = kind === 'error' ? 'var(--danger)' : (kind === 'success' ? 'var(--almog-purple)' : 'var(--muted)');
-    el.style.background = kind === 'error' ? 'var(--danger-bg)' : (kind === 'success' ? 'var(--almog-tint)' : 'var(--bg)');
-  }
-
-  function submitResultToServer(){
-    var u = ui();
-    setSubmitStatus('pending', u.submitSending);
-
-    var payload = {
-      first: fields.first.el.value,
-      last: fields.last.el.value,
-      email: fields.email.el.value,
-      id: fields.id.el.value,
-      empnum: fields.empnum.el.value,
-      date: fields.date.el.value,
-      lang: currentLang,
-      answers: answers
-    };
-
-    fetch(API_SUBMIT_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    }).then(function(r){
-      if(!r.ok) throw new Error('bad status ' + r.status);
-      return r.json();
-    }).then(function(data){
-      if(!data || !data.ok) throw new Error('server reported failure');
-      setSubmitStatus('success', ui().submitSuccess);
-    }).catch(function(err){
-      console.error('submitResultToServer failed:', err);
-      setSubmitStatus('error', ui().submitError);
-    });
   }
 
   function esc(s){
