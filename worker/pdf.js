@@ -62,7 +62,7 @@ function esc(s) {
 }
 
 function buildHtml({ submission, questions }) {
-  const { first, last, email, id, empnum, date, lang, answers, correct, score, passed } = submission;
+  const { first, last, email, id, empnum, date, lang, answers, correct, score, passed, passingScore } = submission;
 
   let qHtml = '';
   questions.forEach((item, qi) => {
@@ -97,7 +97,7 @@ function buildHtml({ submission, questions }) {
 <div class="p-score">
   <div class="num ${passed ? 'pass' : 'fail'}">${score}</div>
   <div><div class="lbl">${passed ? 'עבר/ה את המבחן' : 'לא עבר/ה את המבחן'}</div>
-  <div style="font-size:12px;color:#64707C;">${correct} תשובות נכונות מתוך ${questions.length} · ציון עובר: 100</div></div>
+  <div style="font-size:12px;color:#64707C;">${correct} תשובות נכונות מתוך ${questions.length} · ציון עובר: ${passingScore ?? 100}</div></div>
 </div>
 ${qHtml}
 <div class="p-foot">הופק אוטומטית בתאריך ${now.toLocaleDateString('he-IL')} בשעה ${now.toLocaleTimeString('he-IL')}${langNote}</div>

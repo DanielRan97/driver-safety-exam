@@ -4,17 +4,19 @@
 //   POST /api/employee/verify, POST /api/submit   (public exam)
 //   GET  /admin, /admin/*                          (admin HTML shell)
 //   POST /api/admin/*                              (admin JSON API)
-import { getQuestions, PASS_SCORE } from './questions.js';
+import { getQuestions } from './questions.js';
 import { buildResultPdf } from './pdf.js';
 import { findEmployeeByNationalId, resetCanDoAgain } from './db/employees.js';
 import {
   findAttemptByToken, hasCompletedAttempt, createCompletedAttempt, markPdfStored, markPdfFailed,
 } from './db/attempts.js';
+import { getPassingScore } from './db/settings.js';
 import { getAdminFromRequest, checkCsrf } from './admin/auth.js';
 import { buildLoginPage, buildDashboardPage } from './admin/pages.js';
 import {
   handleLogin, handleLogout, handleMe, handleOverview, handleStatistics, handleDrivers, handleIncomplete,
-  handleTesters, handleGuests, handleDriverDetail, handleAttemptDetail, handleCanDoAgain, handleRetryPdf, handleAttemptPdf,
+  handleGuests, handleDriverDetail, handleAttemptDetail, handleCanDoAgain, handleRetryPdf, handleAttemptPdf,
+  handleGetPassingScore, handleSetPassingScore,
 } from './admin/routes.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,10 +48,9 @@ async function handleVerify(request, env) {
   const employee = await findEmployeeByNationalId(env, nationalId);
   if (!employee || !employee.is_active) return json({ status: 'guest' });
 
-  const isTester = employee.role === 'tester';
   const isRequired = !!employee.is_required;
 
-  if (!isTester && isRequired) {
+  if (isRequired) {
     const already = await hasCompletedAttempt(env, employee.id);
     if (already && !employee.can_do_again) {
       return json({ status: 'blocked', message: ALREADY_COMPLETED_MESSAGE });
@@ -58,7 +59,7 @@ async function handleVerify(request, env) {
 
   return json({
     status: 'ok',
-    employee: { firstName: employee.first_name, lastName: employee.last_name, employeeNo: employee.employee_no, isTester },
+    employee: { firstName: employee.first_name, lastName: employee.last_name, employeeNo: employee.employee_no },
   });
 }
 
@@ -112,7 +113,12 @@ async function handleSubmit(request, env, ctx) {
   // rescore or duplicate, just confirm success again.
   const existing = await findAttemptByToken(env, submissionToken);
   if (existing) {
-    return json({ ok: true, score: existing.score, passed: !!existing.passed });
+    return json({
+      ok: true,
+      score: existing.score,
+      passed: !!existing.passed,
+      passingScore: existing.passing_score_at_submission,
+    });
   }
 
   const nationalId = body.id.trim().slice(0, 50);
@@ -120,7 +126,6 @@ async function handleSubmit(request, env, ctx) {
 
   let employeeId = null;
   let isGuest = true;
-  let isTester = false;
   let isRequired = false;
   let firstName = body.first.trim().slice(0, 100);
   let lastName = body.last.trim().slice(0, 100);
@@ -130,20 +135,27 @@ async function handleSubmit(request, env, ctx) {
   if (employee && employee.is_active) {
     employeeId = employee.id;
     isGuest = false;
-    isTester = employee.role === 'tester';
     isRequired = !!employee.is_required;
     firstName = employee.first_name;
     lastName = employee.last_name;
     employeeNo = employee.employee_no || '';
     canDoAgain = !!employee.can_do_again;
 
-    if (!isTester && isRequired) {
+    // Every required driver follows the same rule — one attempt by
+    // default, one additional attempt if an admin sets can_do_again.
+    if (isRequired) {
       const already = await hasCompletedAttempt(env, employeeId);
       if (already && !canDoAgain) {
         return json({ ok: false, error: 'already_completed', message: ALREADY_COMPLETED_MESSAGE }, 403);
       }
     }
   }
+
+  // Read once per submission so every attempt's `passed` reflects the
+  // threshold actually in effect at that moment — never trust a
+  // client-sent pass/fail, and never recompute this later from a
+  // possibly-changed system_settings value.
+  const passingScore = await getPassingScore(env);
 
   let correct = 0;
   const answersDetailed = body.answers.map((a, i) => {
@@ -152,7 +164,7 @@ async function handleSubmit(request, env, ctx) {
     return { questionIndex: i, chosen: a, correct: QUESTIONS[i].correct, isCorrect };
   });
   const score = Math.round((correct / QUESTIONS.length) * 100);
-  const passed = score >= PASS_SCORE;
+  const passed = score >= passingScore;
 
   const email = body.email.trim().slice(0, 200);
   const dateField = body.date.trim().slice(0, 20);
@@ -162,12 +174,12 @@ async function handleSubmit(request, env, ctx) {
   const statisticsJson = JSON.stringify({ correctCount: correct, incorrectCount: QUESTIONS.length - correct });
   const submittedAt = new Date().toISOString();
 
-  console.log(`New ${isGuest ? 'guest' : isTester ? 'tester' : 'driver'} submission — id ${maskId(nationalId)}, score ${score}`);
+  console.log(`New ${isGuest ? 'guest' : 'driver'} submission — id ${maskId(nationalId)}, score ${score}`);
 
   const attemptId = await createCompletedAttempt(env, {
     employeeId, isGuest, firstName, lastName, employeeNo, nationalId,
     submissionToken, email, dateField, lang,
-    score, correctCount: correct, passed,
+    score, correctCount: correct, passed, passingScoreAtSubmission: passingScore,
     submittedAt, questionsSnapshot, answersJson, statisticsJson,
   });
 
@@ -176,10 +188,13 @@ async function handleSubmit(request, env, ctx) {
     await resetCanDoAgain(env, employeeId);
   }
 
-  const submission = { first: firstName, last: lastName, email, id: nationalId, empnum: employeeNo, date: dateField, lang, answers: body.answers, correct, score, passed };
+  const submission = {
+    first: firstName, last: lastName, email, id: nationalId, empnum: employeeNo, date: dateField, lang,
+    answers: body.answers, correct, score, passed, passingScore,
+  };
   ctx.waitUntil(generateAndStorePdf(env, attemptId, submission));
 
-  return json({ ok: true, score, passed });
+  return json({ ok: true, score, passed, passingScore });
 }
 
 // ---------------------------------------------------------------------
@@ -219,8 +234,9 @@ async function handleAdminApi(request, env, path) {
   if (path === '/api/admin/statistics' && request.method === 'GET') return handleStatistics(env);
   if (path === '/api/admin/drivers' && request.method === 'GET') return handleDrivers(request, env);
   if (path === '/api/admin/incomplete' && request.method === 'GET') return handleIncomplete(env);
-  if (path === '/api/admin/testers' && request.method === 'GET') return handleTesters(env);
   if (path === '/api/admin/guests' && request.method === 'GET') return handleGuests(env);
+  if (path === '/api/admin/settings/passing-score' && request.method === 'GET') return handleGetPassingScore(env);
+  if (path === '/api/admin/settings/passing-score' && request.method === 'PUT') return handleSetPassingScore(request, env, admin);
 
   let m;
   if ((m = path.match(/^\/api\/admin\/drivers\/(\d+)$/)) && request.method === 'GET') {

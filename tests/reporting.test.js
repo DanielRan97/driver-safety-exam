@@ -56,9 +56,9 @@ describe('computeCampaignStatistics', () => {
   const stats = computeCampaignStatistics([a1, a2, a3], QUESTIONS);
 
   // 23 / 24. Only the attempts actually passed in are counted — the
-  // caller (listAcceptedRequiredDriverAttempts) is what excludes testers
-  // and guests, so feeding it only required-driver rows is what makes
-  // this exclusion correct end-to-end.
+  // caller (listAcceptedRequiredDriverAttempts) is what excludes
+  // non-required employees and guests, so feeding it only required-driver
+  // rows is what makes this exclusion correct end-to-end.
   it('derives totals only from the given (required-driver) attempts', () => {
     expect(stats.totalCompleted).toBe(3);
     expect(stats.passedCount).toBe(1);
@@ -88,7 +88,7 @@ describe('computeCampaignStatistics', () => {
 
 describe('buildDriversExcelBase64', () => {
   // 22. Excel contains only the rows it was given (only required drivers,
-  // since testers/guests are filtered out before this is called)
+  // since non-required employees/guests are filtered out before this is called)
   it('produces a valid, readable .xlsx with exactly the given driver rows', () => {
     const base64 = buildDriversExcelBase64([a1, a2, a3], QUESTIONS.length);
     expect(typeof base64).toBe('string');

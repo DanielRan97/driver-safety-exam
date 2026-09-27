@@ -131,7 +131,7 @@ export function buildDashboardPage({ displayName, csrfToken, initialRoute }) {
     <button class="nav-item" data-view="incomplete">טרם השלימו</button>
     <button class="nav-item" data-view="stats">סטטיסטיקות</button>
     <button class="nav-item" data-view="guests">אורחים</button>
-    <button class="nav-item" data-view="testers">טסטרים</button>
+    <button class="nav-item" data-view="settings">הגדרות</button>
     <button class="nav-item" id="logout-btn">יציאה</button>
   </div>
   <div class="main">
@@ -160,7 +160,7 @@ function api(path, opts){
 function esc(s){ var d=document.createElement('div'); d.textContent = s==null?'':s; return d.innerHTML; }
 function fmtDate(iso){ if(!iso) return ''; var d = new Date(iso); return d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'}); }
 
-var titles = {overview:'סקירה כללית', drivers:'נהגים', incomplete:'טרם השלימו את המבחן', stats:'סטטיסטיקות', guests:'אורחים', testers:'טסטרים'};
+var titles = {overview:'סקירה כללית', drivers:'נהגים', incomplete:'טרם השלימו את המבחן', stats:'סטטיסטיקות', guests:'אורחים', settings:'הגדרות'};
 
 function setActiveNav(view){
   document.querySelectorAll('.nav-item[data-view]').forEach(function(b){ b.classList.toggle('active', b.dataset.view === view); });
@@ -171,7 +171,7 @@ function showView(view, opts){
   opts = opts || {};
   setActiveNav(view);
   if(!opts.skipPush) history.pushState({view:view}, '', '/admin' + (view === 'overview' ? '' : '/' + view));
-  var renderers = {overview: renderOverview, drivers: renderDrivers, incomplete: renderIncomplete, stats: renderStats, guests: renderGuests, testers: renderTesters};
+  var renderers = {overview: renderOverview, drivers: renderDrivers, incomplete: renderIncomplete, stats: renderStats, guests: renderGuests, settings: renderSettings};
   (renderers[view] || renderOverview)();
 }
 
@@ -299,10 +299,44 @@ function renderGuests(){
   el.innerHTML = '<div class="muted">טוען...</div>';
   api('/api/admin/guests').then(function(d){ if(d.ok) el.innerHTML = renderAttemptsTable(d.attempts, false); });
 }
-function renderTesters(){
+function renderSettings(){
   var el = document.getElementById('content');
   el.innerHTML = '<div class="muted">טוען...</div>';
-  api('/api/admin/testers').then(function(d){ if(d.ok) el.innerHTML = renderAttemptsTable(d.attempts, true); });
+  api('/api/admin/settings/passing-score').then(function(d){
+    if(!d.ok) return;
+    el.innerHTML =
+      '<div class="card" style="max-width:420px;">' +
+        '<div class="section-title">הגדרות מבחן</div>' +
+        '<div class="muted" style="margin-bottom:14px;">ציון עובר נוכחי<br><span style="font-size:22px;font-weight:800;color:var(--almog-purple);">' + d.passingScore + '</span></div>' +
+        '<label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ציון עובר</label>' +
+        '<input type="number" id="passing-score-input" min="0" max="100" step="1" value="' + d.passingScore + '" style="width:120px;margin-bottom:12px;">' +
+        '<div><button class="btn btn-primary" id="save-passing-score-btn">שמור שינוי</button></div>' +
+        '<div id="passing-score-msg" style="margin-top:10px;font-size:13px;font-weight:700;"></div>' +
+        '<div class="muted" style="margin-top:14px;font-size:12.5px;">שינוי הציון העובר ישפיע רק על מבחנים שיוגשו מעכשיו והלאה. תוצאות קודמות לא ישתנו.</div>' +
+      '</div>';
+
+    document.getElementById('save-passing-score-btn').addEventListener('click', function(){
+      var input = document.getElementById('passing-score-input');
+      var val = parseInt(input.value, 10);
+      var msg = document.getElementById('passing-score-msg');
+      if(!Number.isInteger(val) || val < 0 || val > 100 || String(val) !== input.value.trim()){
+        msg.style.color = 'var(--danger)';
+        msg.textContent = 'ציון עובר חייב להיות מספר שלם בין 0 ל-100.';
+        return;
+      }
+      if(!confirm('האם לשנות את הציון העובר ל-' + val + '?')) return;
+      msg.textContent = '';
+      api('/api/admin/settings/passing-score', {method:'PUT', body: JSON.stringify({passingScore: val})}).then(function(r){
+        if(r.ok){
+          msg.style.color = 'var(--success)';
+          msg.textContent = 'הציון העובר עודכן ל-' + r.passingScore + '.';
+        } else {
+          msg.style.color = 'var(--danger)';
+          msg.textContent = r.message || 'שגיאה בעדכון הציון העובר.';
+        }
+      });
+    });
+  });
 }
 
 function openDriverDetail(employeeId){

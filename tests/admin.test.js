@@ -115,7 +115,7 @@ describe('admin auth — unauthenticated access', () => {
   });
 
   it('every /api/admin/* JSON route rejects a request with no session cookie', async () => {
-    const routes = ['/api/admin/overview', '/api/admin/statistics', '/api/admin/drivers', '/api/admin/incomplete', '/api/admin/testers', '/api/admin/guests'];
+    const routes = ['/api/admin/overview', '/api/admin/statistics', '/api/admin/drivers', '/api/admin/incomplete', '/api/admin/guests', '/api/admin/settings/passing-score'];
     for (const path of routes) {
       const { status, body } = await adminFetch(path);
       expect(status).toBe(401);
@@ -126,6 +126,26 @@ describe('admin auth — unauthenticated access', () => {
   it('rejects a garbage/forged session cookie', async () => {
     const { status } = await adminFetch('/api/admin/overview', { cookie: 'admin_session=not-a-real-token' });
     expect(status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------
+// The tester concept has been removed entirely — no nav item, no route.
+// ---------------------------------------------------------------------
+describe('tester concept fully removed', () => {
+  it('the dashboard shell does not mention testers anywhere', async () => {
+    const session = await login('daniel_test', 'DanielTestPass123!');
+    const res = await SELF.fetch('https://example.com/admin', { headers: { Cookie: session.cookie } });
+    const html = await res.text();
+    expect(html.toLowerCase()).not.toContain('tester');
+    expect(html).not.toContain('טסטרים');
+    expect(html).toContain('הגדרות');
+  });
+
+  it('/api/admin/testers no longer exists', async () => {
+    const { status, body } = await adminFetch('/api/admin/testers', { cookie: adminCookie });
+    expect(status).toBe(404);
+    expect(body.error).toBe('not_found');
   });
 });
 
@@ -243,17 +263,17 @@ describe('admin auth — logout and session lifetime', () => {
 });
 
 // ---------------------------------------------------------------------
-// Driver data: required-driver counting, tester/guest exclusion,
+// Driver data: required-driver counting, non-required/guest exclusion,
 // incomplete list
 // ---------------------------------------------------------------------
 describe('admin data — overview, incomplete, exclusions', () => {
-  it('overview counts only required drivers, excluding testers and guests', async () => {
+  it('overview counts only required drivers, excluding non-required employees and guests', async () => {
     const before = await adminFetch('/api/admin/overview', { cookie: adminCookie });
 
     const driver = await insertTestEmployee({ isRequired: 1, role: 'driver' });
-    const tester = await insertTestEmployee({ isRequired: 0, role: 'tester' });
+    const nonRequired = await insertTestEmployee({ isRequired: 0, role: 'driver' });
     await submitExam(driver);
-    await submitExam(tester);
+    await submitExam(nonRequired);
     // guest: national id that matches no employee
     await SELF.fetch('https://example.com/api/submit', {
       method: 'POST',
@@ -278,16 +298,6 @@ describe('admin data — overview, incomplete, exclusions', () => {
     expect(body.drivers.some((d) => d.firstName === 'NeverTook')).toBe(true);
   });
 
-  it('testers appear under /api/admin/testers, not the drivers table', async () => {
-    const tester = await insertTestEmployee({ role: 'tester', isRequired: 0, firstName: 'Tester', lastName: `T${Date.now()}` });
-    await submitExam(tester);
-    const testers = await adminFetch('/api/admin/testers', { cookie: adminCookie });
-    expect(testers.body.attempts.some((a) => a.lastName === tester.last_name)).toBe(true);
-
-    const drivers = await adminFetch('/api/admin/drivers', { cookie: adminCookie });
-    expect(drivers.body.drivers.some((d) => d.lastName === tester.last_name)).toBe(false);
-  });
-
   it('guests appear under /api/admin/guests', async () => {
     const guestId = `4${Math.floor(Math.random() * 1e8)}`.padStart(9, '0');
     await SELF.fetch('https://example.com/api/submit', {
@@ -302,6 +312,121 @@ describe('admin data — overview, incomplete, exclusions', () => {
     });
     const { body } = await adminFetch('/api/admin/guests', { cookie: adminCookie });
     expect(body.attempts.some((a) => a.nationalId === guestId)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Configurable passing score (system_settings) — server-side enforced,
+// never trusts the client, never retroactively rewrites history.
+// ---------------------------------------------------------------------
+describe('configurable passing score', () => {
+  it('reads the current passing score from D1', async () => {
+    const { status, body } = await adminFetch('/api/admin/settings/passing-score', { cookie: adminCookie });
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(typeof body.passingScore).toBe('number');
+  });
+
+  it('unauthenticated user cannot read the passing-score setting', async () => {
+    const res = await SELF.fetch('https://example.com/api/admin/settings/passing-score');
+    expect(res.status).toBe(401);
+  });
+
+  it('unauthenticated user cannot change the passing score', async () => {
+    const res = await SELF.fetch('https://example.com/api/admin/settings/passing-score', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passingScore: 50 }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('a valid admin can change the passing score', async () => {
+    const { status, body } = await adminFetch('/api/admin/settings/passing-score', {
+      method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: 90 },
+    });
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.passingScore).toBe(90);
+
+    const { body: readBack } = await adminFetch('/api/admin/settings/passing-score', { cookie: adminCookie });
+    expect(readBack.passingScore).toBe(90);
+
+    await adminFetch('/api/admin/settings/passing-score', { method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: 100 } });
+  });
+
+  it('rejects invalid values server-side (out of range, non-integer, wrong type)', async () => {
+    for (const bad of [-1, 101, 50.5, 'abc', null, true]) {
+      const { status, body } = await adminFetch('/api/admin/settings/passing-score', {
+        method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: bad },
+      });
+      expect(status).toBe(400);
+      expect(body.error).toBe('invalid_passing_score');
+    }
+  });
+
+  it('enforces CSRF on the PUT route', async () => {
+    const { status } = await adminFetch('/api/admin/settings/passing-score', {
+      method: 'PUT', cookie: adminCookie, body: { passingScore: 80 },
+    });
+    expect(status).toBe(403);
+
+    const { body } = await adminFetch('/api/admin/settings/passing-score', { cookie: adminCookie });
+    expect(body.passingScore).toBe(100); // unchanged
+  });
+
+  it('a submission scoring exactly the threshold passes; one step below fails', async () => {
+    await adminFetch('/api/admin/settings/passing-score', { method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: 80 } });
+    try {
+      const atThreshold = await insertTestEmployee({ isRequired: 1, role: 'driver' });
+      const atResult = await submitExam(atThreshold, { wrongIndexes: [0, 1, 2, 3] }); // 16/20 = 80
+      expect(atResult.score).toBe(80);
+      expect(atResult.passed).toBe(true);
+
+      const belowThreshold = await insertTestEmployee({ isRequired: 1, role: 'driver' });
+      const belowResult = await submitExam(belowThreshold, { wrongIndexes: [0, 1, 2, 3, 4] }); // 15/20 = 75
+      expect(belowResult.score).toBe(75);
+      expect(belowResult.passed).toBe(false);
+    } finally {
+      await adminFetch('/api/admin/settings/passing-score', { method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: 100 } });
+    }
+  });
+
+  it('changing the score affects only future submissions — historical passed values never change', async () => {
+    // Submitted while the threshold is 100: 1 wrong -> 95 -> fails.
+    const before = await insertTestEmployee({ isRequired: 1, role: 'driver' });
+    const beforeResult = await submitExam(before, { wrongIndexes: [0] });
+    expect(beforeResult.score).toBe(95);
+    expect(beforeResult.passed).toBe(false);
+    const beforeRow = await env.DB.prepare(
+      'SELECT passed, passing_score_at_submission FROM exam_attempts WHERE employee_id = ?',
+    ).bind(before.id).first();
+    expect(beforeRow.passed).toBe(0);
+    expect(beforeRow.passing_score_at_submission).toBe(100);
+
+    try {
+      await adminFetch('/api/admin/settings/passing-score', { method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: 90 } });
+
+      // A NEW submission at 95 now passes, and stores its own threshold.
+      const after = await insertTestEmployee({ isRequired: 1, role: 'driver' });
+      const afterResult = await submitExam(after, { wrongIndexes: [0] });
+      expect(afterResult.score).toBe(95);
+      expect(afterResult.passed).toBe(true);
+      const afterRow = await env.DB.prepare(
+        'SELECT passed, passing_score_at_submission FROM exam_attempts WHERE employee_id = ?',
+      ).bind(after.id).first();
+      expect(afterRow.passed).toBe(1);
+      expect(afterRow.passing_score_at_submission).toBe(90);
+
+      // The earlier attempt's stored passed value must be untouched by
+      // the setting change — admin statistics must keep using it as-is.
+      const beforeRowAfterChange = await env.DB.prepare(
+        'SELECT passed FROM exam_attempts WHERE employee_id = ?',
+      ).bind(before.id).first();
+      expect(beforeRowAfterChange.passed).toBe(0);
+    } finally {
+      await adminFetch('/api/admin/settings/passing-score', { method: 'PUT', cookie: adminCookie, csrf: adminCsrf, body: { passingScore: 100 } });
+    }
   });
 });
 

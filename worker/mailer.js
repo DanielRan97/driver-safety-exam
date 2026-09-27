@@ -34,9 +34,9 @@ async function sendViaResend(env, { subject, text, attachments, replyTo }) {
   return body;
 }
 
-// `progress`, when given (only for required drivers — not guests/testers),
+// `progress`, when given (only for required drivers — not guests),
 // is { completed, total } and gets appended to the email body.
-export async function sendResultEmail(env, { submission, pdfBuffer, progress, isGuest, isTester }) {
+export async function sendResultEmail(env, { submission, pdfBuffer, progress, isGuest }) {
   const { first, last, id, empnum, date, score, passed, email } = submission;
   const fullName = `${first} ${last}`.trim();
   const subject = `תוצאת מבחן בטיחות - ${fullName} - ${date}`;
@@ -55,9 +55,7 @@ export async function sendResultEmail(env, { submission, pdfBuffer, progress, is
     `סטטוס: ${passed ? 'עבר/ה את המבחן' : 'לא עבר/ה את המבחן'}`,
   ];
 
-  if (isTester) {
-    lines.push('', '(בדיקה — Tester, לא נספר בסטטיסטיקות ובדוח הסופי)');
-  } else if (isGuest) {
+  if (isGuest) {
     lines.push('', '(אורח/ת — לא ברשימת הנהגים הנדרשים, לא נספר בסטטיסטיקות ובדוח הסופי)');
   } else if (progress) {
     const pct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 1000) / 10 : 0;

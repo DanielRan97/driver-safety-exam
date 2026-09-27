@@ -132,31 +132,6 @@ describe('employee lookup', () => {
     expect(refreshed.can_do_again).toBe(0);
   });
 
-  // 9. Tester can run the exam repeatedly — never blocked regardless of
-  // how many sent attempts exist
-  it('never blocks a tester, even with multiple sent attempts', async () => {
-    const tester = await insertTestEmployee({ role: 'tester', isRequired: 0 });
-    await sendAttempt(tester);
-    await sendAttempt(tester);
-    const res = await SELF.fetch('https://example.com/api/employee/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: tester.national_id }),
-    });
-    const body = await res.json();
-    expect(body.status).toBe('ok');
-    expect(body.employee.isTester).toBe(true);
-  });
-
-  // 11. Testers excluded from completion count
-  it('excludes testers from the required-driver completion count', async () => {
-    const before = await countCompletedRequiredDrivers(env);
-    const tester = await insertTestEmployee({ role: 'tester', isRequired: 0 });
-    await sendAttempt(tester);
-    const after = await countCompletedRequiredDrivers(env);
-    expect(after).toBe(before);
-  });
-
   // 13 / 19. A required driver with two allowed sent attempts still counts once
   it('counts a required driver exactly once even with two sent attempts (can_do_again)', async () => {
     const emp = await insertTestEmployee();
@@ -173,12 +148,65 @@ describe('employee lookup', () => {
 
   // 18. Progress calculation (delta-based, so it's independent of other
   // tests' shared seed/state)
-  it('total required driver count only includes active, required, non-tester rows', async () => {
+  it('total required driver count only includes active, required rows', async () => {
     const totalBefore = await countRequiredDrivers(env);
     await insertTestEmployee(); // +1 required
-    await insertTestEmployee({ role: 'tester', isRequired: 0 }); // should not count
-    await insertTestEmployee({ isActive: 0 }); // should not count
+    await insertTestEmployee({ isRequired: 0 }); // not required -> should not count
+    await insertTestEmployee({ isActive: 0 }); // inactive -> should not count
     const totalAfter = await countRequiredDrivers(env);
     expect(totalAfter).toBe(totalBefore + 1);
+  });
+});
+
+// 12 / 13 / 14. There is no tester role anymore — Daniel Ran and Efi Caro
+// (also admins via the separate admin_users table) are plain required
+// drivers in `employees` and follow the exact same one-attempt-plus-
+// can_do_again rule as everyone else. No admin special-casing.
+describe('Daniel Ran and Efi Caro are normal required drivers', () => {
+  const DANIEL_NATIONAL_ID = '318188505';
+  const EFI_NATIONAL_ID = '318316171';
+
+  it('both are role=driver, is_required=1 — not tester', async () => {
+    const daniel = await findEmployeeByNationalId(env, DANIEL_NATIONAL_ID);
+    const efi = await findEmployeeByNationalId(env, EFI_NATIONAL_ID);
+    expect(daniel.role).toBe('driver');
+    expect(daniel.is_required).toBe(1);
+    expect(efi.role).toBe('driver');
+    expect(efi.is_required).toBe(1);
+  });
+
+  it('Daniel is blocked after one completed attempt, exactly like any required driver', async () => {
+    const daniel = await findEmployeeByNationalId(env, DANIEL_NATIONAL_ID);
+    await sendAttempt(daniel);
+    const res = await SELF.fetch('https://example.com/api/employee/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nationalId: DANIEL_NATIONAL_ID }),
+    });
+    expect((await res.json()).status).toBe('blocked');
+  });
+
+  it('Efi\'s admin privileges grant no exam exemption — can_do_again works the same as any driver', async () => {
+    const efi = await findEmployeeByNationalId(env, EFI_NATIONAL_ID);
+    await sendAttempt(efi);
+    await env.DB.prepare('UPDATE employees SET can_do_again = 1 WHERE id = ?').bind(efi.id).run();
+
+    const allowed = await SELF.fetch('https://example.com/api/employee/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nationalId: EFI_NATIONAL_ID }),
+    });
+    expect((await allowed.json()).status).toBe('ok');
+
+    await resetCanDoAgain(env, efi.id); // the retry flow would consume it, same as any driver
+    const refreshed = await findEmployeeByNationalId(env, EFI_NATIONAL_ID);
+    expect(refreshed.can_do_again).toBe(0);
+
+    const blockedAgain = await SELF.fetch('https://example.com/api/employee/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nationalId: EFI_NATIONAL_ID }),
+    });
+    expect((await blockedAgain.json()).status).toBe('blocked');
   });
 });

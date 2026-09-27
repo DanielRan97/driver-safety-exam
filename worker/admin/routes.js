@@ -8,8 +8,10 @@ import {
 import { getQuestions } from '../questions.js';
 import { findEmployeeById, resetCanDoAgain, countRequiredDrivers, countCompletedRequiredDrivers, listIncompleteRequiredDrivers } from '../db/employees.js';
 import {
-  getAttemptById, listAttemptsForEmployee, listAcceptedRequiredDriverAttempts, listGuestAttempts, listTesterAttempts,
+  getAttemptById, listAttemptsForEmployee, listAcceptedRequiredDriverAttempts, listGuestAttempts,
 } from '../db/attempts.js';
+import { getPassingScore, setPassingScore } from '../db/settings.js';
+import { recordAuditLog } from '../db/audit.js';
 import { computeCampaignStatistics } from '../stats.js';
 import { buildResultPdf } from '../pdf.js';
 
@@ -105,6 +107,41 @@ export async function handleStatistics(env) {
 }
 
 // ---------------------------------------------------------------------
+// Settings: configurable passing score (system_settings) — never
+// affects already-stored attempts, only future submissions.
+// ---------------------------------------------------------------------
+export async function handleGetPassingScore(env) {
+  const passingScore = await getPassingScore(env);
+  return json({ ok: true, passingScore });
+}
+
+export async function handleSetPassingScore(request, env, admin) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ ok: false, error: 'invalid json' }, 400);
+  }
+  // typeof check first: Number(null) === 0 and Number('') === 0 would
+  // otherwise silently coerce a missing/malformed value into a valid
+  // (if surprising) score of 0.
+  const newScore = body?.passingScore;
+  if (typeof newScore !== 'number' || !Number.isInteger(newScore) || newScore < 0 || newScore > 100) {
+    return json({ ok: false, error: 'invalid_passing_score', message: 'ציון עובר חייב להיות מספר שלם בין 0 ל-100.' }, 400);
+  }
+
+  const oldScore = await getPassingScore(env);
+  await setPassingScore(env, newScore, admin.id);
+  await recordAuditLog(env, {
+    adminUserId: admin.id,
+    action: 'passing_score_changed',
+    details: { oldValue: oldScore, newValue: newScore },
+  });
+
+  return json({ ok: true, passingScore: newScore });
+}
+
+// ---------------------------------------------------------------------
 // Drivers table + incomplete list
 // ---------------------------------------------------------------------
 function driverStatus(attempt, canDoAgain) {
@@ -175,11 +212,6 @@ export async function handleIncomplete(env) {
     count: rows.length,
     drivers: rows.map((r) => ({ firstName: r.first_name, lastName: r.last_name, employeeNo: r.employee_no })),
   });
-}
-
-export async function handleTesters(env) {
-  const rows = await listTesterAttempts(env);
-  return json({ ok: true, attempts: rows.map(summarizeAttempt) });
 }
 
 export async function handleGuests(env) {
@@ -318,6 +350,10 @@ export async function handleRetryPdf(env, attemptId) {
     answers: JSON.parse(attempt.answers_json).map((a) => a.chosen),
     correct: attempt.correct_count,
     score: attempt.score,
+    // The threshold actually in effect at submission time — regenerating
+    // a PDF later must never show a different passing score than the
+    // driver originally saw, even if system_settings has since changed.
+    passingScore: attempt.passing_score_at_submission,
     passed: !!attempt.passed,
   };
 

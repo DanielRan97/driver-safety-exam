@@ -78,21 +78,17 @@ function shuffled(arr) {
   return a;
 }
 
-function readPassScore() {
-  // worker/questions.js statically imports generated/questions.json
-  // without a JSON import attribute, which Node's own ESM loader
-  // requires but Wrangler's bundler does not — so it can't be imported
-  // directly from a plain Node script. Reading the constant out of its
-  // source text (rather than hardcoding a second copy) keeps this in
-  // sync with the real value without touching that production file.
-  const src = fs.readFileSync(path.join(__dirname, '..', 'worker', 'questions.js'), 'utf8');
-  const match = src.match(/PASS_SCORE\s*=\s*(\d+)/);
-  if (!match) throw new Error('Could not determine PASS_SCORE from worker/questions.js');
-  return Number(match[1]);
+function readPassingScore({ remote }) {
+  // The passing score is a configurable D1 setting (system_settings,
+  // migrations/0006), not a source-code constant — read the same value
+  // the Worker itself would read at submission time.
+  const rows = runD1Command("SELECT value FROM system_settings WHERE key='passing_score'", { remote });
+  if (!rows.length) throw new Error('passing_score not found in system_settings — run migrations first.');
+  return Number(rows[0].value);
 }
 
 async function main() {
-  const PASS_SCORE = readPassScore();
+  const PASS_SCORE = readPassingScore({ remote });
   const QUESTIONS = require('../worker/generated/questions.json');
 
   // Fixed per-question difficulty weight (deterministic) so "most missed
@@ -187,12 +183,12 @@ async function main() {
     const dateField = submittedIso.slice(0, 10);
     return `INSERT INTO exam_attempts
       (employee_id, is_guest, first_name, last_name, employee_no, national_id, submission_token,
-       email, date_field, lang, score, correct_count, passed,
+       email, date_field, lang, score, correct_count, passed, passing_score_at_submission,
        submitted_at, completed_at, pdf_status, is_demo,
        questions_snapshot, answers_json, statistics_json, created_at)
      VALUES
       (${r.employee.id}, 0, ${sqlEscape(r.employee.first_name)}, ${sqlEscape(r.employee.last_name)}, ${sqlEscape(r.employee.employee_no)}, ${sqlEscape(r.employee.national_id)}, ${sqlEscape(r.submissionToken)},
-       ${sqlEscape('demo@example.com')}, ${sqlEscape(dateField)}, ${sqlEscape(r.lang)}, ${r.score}, ${r.correctCount}, ${r.passed ? 1 : 0},
+       ${sqlEscape('demo@example.com')}, ${sqlEscape(dateField)}, ${sqlEscape(r.lang)}, ${r.score}, ${r.correctCount}, ${r.passed ? 1 : 0}, ${PASS_SCORE},
        ${sqlEscape(submittedIso)}, ${sqlEscape(submittedIso)}, 'demo_not_generated', 1,
        ${sqlEscape(questionsSnapshot)}, ${sqlEscape(answersJson)}, ${sqlEscape(statisticsJson)}, ${sqlEscape(submittedIso)});`;
   });

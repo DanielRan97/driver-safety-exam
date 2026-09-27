@@ -28,24 +28,28 @@ export async function hasCompletedAttempt(env, employeeId) {
 export async function createCompletedAttempt(env, data) {
   const {
     employeeId, isGuest, firstName, lastName, employeeNo, nationalId, submissionToken,
-    email, dateField, lang, score, correctCount, passed,
+    email, dateField, lang, score, correctCount, passed, passingScoreAtSubmission,
     startedAt, submittedAt, questionsSnapshot, answersJson, statisticsJson,
   } = data;
 
   // email_status is left at its schema default ('pending') — it's a
   // vestige of the removed email-reporting flow, no longer meaningful,
   // and 'sent' would be actively false now that no email is sent.
+  //
+  // passing_score_at_submission snapshots the threshold actually in
+  // effect for this attempt — a later change to system_settings must
+  // never change what this specific attempt's `passed` value means.
   const result = await env.DB.prepare(
     `INSERT INTO exam_attempts
       (employee_id, is_guest, first_name, last_name, employee_no, national_id, submission_token,
-       email, date_field, lang, score, correct_count, passed,
+       email, date_field, lang, score, correct_count, passed, passing_score_at_submission,
        started_at, submitted_at, completed_at, pdf_status,
        questions_snapshot, answers_json, statistics_json, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'pending', ?, ?, ?, CURRENT_TIMESTAMP)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'pending', ?, ?, ?, CURRENT_TIMESTAMP)`,
   )
     .bind(
       employeeId ?? null, isGuest ? 1 : 0, firstName, lastName, employeeNo ?? null, nationalId, submissionToken,
-      email, dateField, lang, score, correctCount, passed ? 1 : 0,
+      email, dateField, lang, score, correctCount, passed ? 1 : 0, passingScoreAtSubmission ?? null,
       startedAt ?? null, submittedAt,
       questionsSnapshot, answersJson, statisticsJson,
     )
@@ -110,12 +114,3 @@ export async function listGuestAttempts(env) {
   return results || [];
 }
 
-export async function listTesterAttempts(env) {
-  const { results } = await env.DB.prepare(
-    `SELECT a.* FROM exam_attempts a
-     JOIN employees e ON e.id = a.employee_id
-     WHERE a.is_guest = 0 AND e.role = 'tester'
-     ORDER BY a.submitted_at DESC`,
-  ).all();
-  return results || [];
-}
