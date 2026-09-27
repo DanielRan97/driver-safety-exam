@@ -97,7 +97,7 @@ let adminCsrf;
 
 beforeAll(async () => {
   await createAdmin('daniel_test', 'DanielTestPass123!', 'Daniel Ran');
-  await createAdmin('efi_test', 'EfiTestPass123!', 'Efi Karo');
+  await createAdmin('efi_test', 'EfiTestPass123!', 'Efi Caro');
   const session = await login('daniel_test', 'DanielTestPass123!');
   adminCookie = session.cookie;
   adminCsrf = session.body.csrfToken;
@@ -144,7 +144,7 @@ describe('admin auth — login', () => {
   it('logs Efi in with the correct password', async () => {
     const { status, body } = await login('efi_test', 'EfiTestPass123!');
     expect(status).toBe(200);
-    expect(body.admin.displayName).toBe('Efi Karo');
+    expect(body.admin.displayName).toBe('Efi Caro');
   });
 
   it('rejects a wrong password without revealing whether the username exists', async () => {
