@@ -20,8 +20,7 @@ export async function findEmployeeById(env, employeeId) {
 }
 
 // Resets the one-time can_do_again override after it has been used for a
-// successful (email_status='sent') retry, so it doesn't grant unlimited
-// retakes.
+// successful retry, so it doesn't grant unlimited retakes.
 export async function resetCanDoAgain(env, employeeId) {
   await env.DB.prepare('UPDATE employees SET can_do_again = 0 WHERE id = ?').bind(employeeId).run();
 }
@@ -34,16 +33,30 @@ export async function countRequiredDrivers(env) {
 }
 
 // Distinct employees, not attempt rows — a driver with two allowed (e.g.
-// can_do_again) sent attempts still counts once.
+// can_do_again) attempts still counts once. Completion no longer depends
+// on email (that reporting channel was removed) — any stored attempt
+// counts.
 export async function countCompletedRequiredDrivers(env) {
   const row = await env.DB.prepare(
     `SELECT COUNT(DISTINCT a.employee_id) AS n
      FROM exam_attempts a
      JOIN employees e ON e.id = a.employee_id
-     WHERE a.is_guest = 0 AND a.email_status = 'sent'
+     WHERE a.is_guest = 0
        AND e.role = 'driver' AND e.is_required = 1`,
   ).first();
   return row ? row.n : 0;
+}
+
+// Required drivers who have not yet completed the exam at all.
+export async function listIncompleteRequiredDrivers(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT e.id, e.first_name, e.last_name, e.employee_no
+     FROM employees e
+     WHERE e.role = 'driver' AND e.is_required = 1 AND e.is_active = 1
+       AND e.id NOT IN (SELECT DISTINCT employee_id FROM exam_attempts WHERE is_guest = 0 AND employee_id IS NOT NULL)
+     ORDER BY e.employee_no`,
+  ).all();
+  return results || [];
 }
 
 export async function listRequiredDrivers(env) {

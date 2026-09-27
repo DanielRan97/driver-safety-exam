@@ -1,42 +1,37 @@
 // Cloudflare Worker entry point. Static files (public/index.html,
 // public/assets/*) are served directly by the Workers "assets" binding
-// before requests ever reach this code — this file handles the two real
-// API routes: POST /api/employee/verify and POST /api/submit.
+// before requests ever reach this code — this file handles:
+//   POST /api/employee/verify, POST /api/submit   (public exam)
+//   GET  /admin, /admin/*                          (admin HTML shell)
+//   POST /api/admin/*                              (admin JSON API)
 import { getQuestions, PASS_SCORE } from './questions.js';
 import { buildResultPdf } from './pdf.js';
-import { sendResultEmail, sendFinalReportEmail } from './mailer.js';
-import { buildDriversExcelBase64 } from './excel.js';
-import { computeCampaignStatistics } from './stats.js';
+import { findEmployeeByNationalId, resetCanDoAgain } from './db/employees.js';
 import {
-  findEmployeeByNationalId, countRequiredDrivers, countCompletedRequiredDrivers, resetCanDoAgain,
-} from './db/employees.js';
-import {
-  findAttemptByToken, hasSentAttempt, createPendingAttempt, markAttemptSent, markAttemptFailed,
-  listAcceptedRequiredDriverAttempts,
+  findAttemptByToken, hasCompletedAttempt, createCompletedAttempt, markPdfStored, markPdfFailed,
 } from './db/attempts.js';
-import { tryClaimFinalReport } from './db/campaign.js';
+import { getAdminFromRequest, checkCsrf } from './admin/auth.js';
+import { buildLoginPage, buildDashboardPage } from './admin/pages.js';
+import {
+  handleLogin, handleLogout, handleMe, handleOverview, handleStatistics, handleDrivers, handleIncomplete,
+  handleTesters, handleGuests, handleDriverDetail, handleAttemptDetail, handleCanDoAgain, handleRetryPdf, handleAttemptPdf,
+} from './admin/routes.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const QUESTIONS = getQuestions();
 const ALREADY_COMPLETED_MESSAGE = 'כבר השלמת בהצלחה את מבחן הבטיחות. אם לדעתך זו טעות, פנה למנהל.';
 
 function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-// Never log a full national ID (security requirement) — only enough to
-// correlate log lines with a person if needed.
 function maskId(id) {
   const s = String(id || '');
   return s.length <= 3 ? '***' : `***${s.slice(-3)}`;
 }
 
 // ---------------------------------------------------------------------
-// POST /api/employee/verify — identifies a driver server-side by national
-// ID. Returns only safe fields; never echoes the national ID back.
+// POST /api/employee/verify
 // ---------------------------------------------------------------------
 async function handleVerify(request, env) {
   let body;
@@ -46,131 +41,59 @@ async function handleVerify(request, env) {
     return json({ status: 'error', message: 'invalid json' }, 400);
   }
   const nationalId = typeof body?.nationalId === 'string' ? body.nationalId.trim().slice(0, 50) : '';
-  if (!nationalId) {
-    return json({ status: 'error', message: 'missing nationalId' }, 400);
-  }
+  if (!nationalId) return json({ status: 'error', message: 'missing nationalId' }, 400);
 
   const employee = await findEmployeeByNationalId(env, nationalId);
-  if (!employee || !employee.is_active) {
-    return json({ status: 'guest' });
-  }
+  if (!employee || !employee.is_active) return json({ status: 'guest' });
 
   const isTester = employee.role === 'tester';
   const isRequired = !!employee.is_required;
 
   if (!isTester && isRequired) {
-    const alreadySent = await hasSentAttempt(env, employee.id);
-    if (alreadySent && !employee.can_do_again) {
+    const already = await hasCompletedAttempt(env, employee.id);
+    if (already && !employee.can_do_again) {
       return json({ status: 'blocked', message: ALREADY_COMPLETED_MESSAGE });
     }
   }
 
   return json({
     status: 'ok',
-    employee: {
-      firstName: employee.first_name,
-      lastName: employee.last_name,
-      employeeNo: employee.employee_no,
-      isTester,
-    },
+    employee: { firstName: employee.first_name, lastName: employee.last_name, employeeNo: employee.employee_no, isTester },
   });
 }
 
 // ---------------------------------------------------------------------
-// Shared tail-end of a submission: generate the PDF, send the result
-// email (with progress for required drivers), mark the attempt sent/
-// failed, reset a used can_do_again override, and — if this was the last
-// required driver — send the one-time final report. Used for both a
-// fresh submission and a same-token retry.
+// Background: generate the PDF and store it in R2. Runs via
+// ctx.waitUntil() *after* the response has already been sent — it can
+// never block or affect the driver's success response.
 // ---------------------------------------------------------------------
-async function finishAttempt(env, attemptRow, { employeeCanDoAgain } = {}) {
-  const submission = {
-    first: attemptRow.first_name,
-    last: attemptRow.last_name,
-    email: attemptRow.email,
-    id: attemptRow.national_id,
-    empnum: attemptRow.employee_no,
-    date: attemptRow.date_field,
-    lang: attemptRow.lang,
-    answers: JSON.parse(attemptRow.answers_json).map((a) => a.chosen),
-    correct: attemptRow.correct_count,
-    score: attemptRow.score,
-    passed: !!attemptRow.passed,
-  };
-  const isGuest = !!attemptRow.is_guest;
-  const isTester = !!attemptRow.__isTester;
-
+async function generateAndStorePdf(env, attemptId, submission) {
   try {
     const pdfBuffer = await buildResultPdf(env, { submission, questions: QUESTIONS });
-    console.log(`Generated PDF: ${pdfBuffer.length} bytes for attempt ${attemptRow.id}`);
-
-    let progress = null;
-    // Only a required driver's *own* completion moves the campaign
-    // progress/final-report needle — guests, testers, and any
-    // non-required employee are excluded, per spec.
-    const isRequiredCompletion = !isGuest && !isTester && !!attemptRow.__isRequired;
-    if (isRequiredCompletion) {
-      const [completed, total] = await Promise.all([
-        countCompletedRequiredDrivers(env),
-        countRequiredDrivers(env),
-      ]);
-      progress = { completed, total };
-    }
-
-    await sendResultEmail(env, {
-      submission,
-      pdfBuffer,
-      progress,
-      isGuest,
-      isTester,
-    });
-
-    await markAttemptSent(env, attemptRow.id);
-
-    if (attemptRow.employee_id && employeeCanDoAgain) {
-      await resetCanDoAgain(env, attemptRow.employee_id);
-    }
-
-    // Last required driver? Send the one-time final report. Guarded by an
-    // atomic UPDATE so concurrent completions can't double-send it.
-    if (isRequiredCompletion && progress && progress.total > 0 && progress.completed >= progress.total) {
-      const won = await tryClaimFinalReport(env);
-      if (won) {
-        try {
-          const accepted = await listAcceptedRequiredDriverAttempts(env);
-          const stats = computeCampaignStatistics(accepted, QUESTIONS);
-          const excelBase64 = buildDriversExcelBase64(accepted, QUESTIONS.length);
-          await sendFinalReportEmail(env, { excelBase64, stats });
-        } catch (err) {
-          // The gate is already claimed; log loudly so this can be
-          // regenerated manually (see CLOUDFLARE.md) rather than retried
-          // automatically and risking a duplicate send.
-          console.error('Final report generation/send failed after claiming the gate:', err);
-        }
-      }
-    }
-
-    return json({ ok: true, score: attemptRow.score, passed: !!attemptRow.passed });
+    const r2Key = `exam-pdfs/${attemptId}.pdf`;
+    await env.PDF_BUCKET.put(r2Key, pdfBuffer, { httpMetadata: { contentType: 'application/pdf' } });
+    await markPdfStored(env, attemptId, r2Key);
+    console.log(`PDF stored for attempt ${attemptId}: ${r2Key}`);
   } catch (err) {
-    console.error(`finishAttempt failed for attempt ${attemptRow.id}:`, err);
-    await markAttemptFailed(env, attemptRow.id, err && err.message).catch(() => {});
-    return json({ ok: false, error: 'server_error' }, 500);
+    console.error(`PDF generation/storage failed for attempt ${attemptId}:`, err);
+    await markPdfFailed(env, attemptId, err && err.message).catch(() => {});
   }
 }
 
 // ---------------------------------------------------------------------
 // POST /api/submit
+// Order: validate -> identify -> score -> save in D1 -> respond success.
+// PDF/R2 happens in the background afterward and never blocks or loses
+// the attempt if it fails (admin can retry it later).
 // ---------------------------------------------------------------------
-async function handleSubmit(request, env) {
+async function handleSubmit(request, env, ctx) {
   let body;
   try {
     body = await request.json();
   } catch {
     return json({ ok: false, error: 'invalid json' }, 400);
   }
-  if (!body || typeof body !== 'object') {
-    return json({ ok: false, error: 'invalid json' }, 400);
-  }
+  if (!body || typeof body !== 'object') return json({ ok: false, error: 'invalid json' }, 400);
 
   const requiredStrings = ['first', 'last', 'email', 'id', 'date'];
   for (const key of requiredStrings) {
@@ -178,34 +101,20 @@ async function handleSubmit(request, env) {
       return json({ ok: false, error: `missing field: ${key}` }, 400);
     }
   }
-  if (!EMAIL_RE.test(body.email.trim())) {
-    return json({ ok: false, error: 'invalid email' }, 400);
-  }
+  if (!EMAIL_RE.test(body.email.trim())) return json({ ok: false, error: 'invalid email' }, 400);
   if (!Array.isArray(body.answers) || body.answers.length !== QUESTIONS.length) {
     return json({ ok: false, error: 'invalid answers array' }, 400);
   }
   const submissionToken = typeof body.submissionToken === 'string' ? body.submissionToken.trim().slice(0, 100) : '';
-  if (!submissionToken) {
-    return json({ ok: false, error: 'missing submissionToken' }, 400);
-  }
+  if (!submissionToken) return json({ ok: false, error: 'missing submissionToken' }, 400);
 
-  // ---- Idempotent retry: same token as a previous attempt ----
+  // Idempotent retry: this exact submission already exists — never
+  // rescore or duplicate, just confirm success again.
   const existing = await findAttemptByToken(env, submissionToken);
   if (existing) {
-    if (existing.email_status === 'sent') {
-      return json({ ok: true, score: existing.score, passed: !!existing.passed });
-    }
-    let employeeCanDoAgain = false;
-    if (existing.employee_id) {
-      const emp = await findEmployeeByNationalId(env, existing.national_id);
-      employeeCanDoAgain = !!(emp && emp.can_do_again);
-      existing.__isTester = emp ? emp.role === 'tester' : false;
-      existing.__isRequired = emp ? !!emp.is_required : false;
-    }
-    return finishAttempt(env, existing, { employeeCanDoAgain });
+    return json({ ok: true, score: existing.score, passed: !!existing.passed });
   }
 
-  // ---- Fresh submission: identify the driver server-side ----
   const nationalId = body.id.trim().slice(0, 50);
   const employee = await findEmployeeByNationalId(env, nationalId);
 
@@ -229,8 +138,8 @@ async function handleSubmit(request, env) {
     canDoAgain = !!employee.can_do_again;
 
     if (!isTester && isRequired) {
-      const alreadySent = await hasSentAttempt(env, employeeId);
-      if (alreadySent && !canDoAgain) {
+      const already = await hasCompletedAttempt(env, employeeId);
+      if (already && !canDoAgain) {
         return json({ ok: false, error: 'already_completed', message: ALREADY_COMPLETED_MESSAGE }, 403);
       }
     }
@@ -255,44 +164,96 @@ async function handleSubmit(request, env) {
 
   console.log(`New ${isGuest ? 'guest' : isTester ? 'tester' : 'driver'} submission — id ${maskId(nationalId)}, score ${score}`);
 
-  const attemptId = await createPendingAttempt(env, {
+  const attemptId = await createCompletedAttempt(env, {
     employeeId, isGuest, firstName, lastName, employeeNo, nationalId,
     submissionToken, email, dateField, lang,
     score, correctCount: correct, passed,
     submittedAt, questionsSnapshot, answersJson, statisticsJson,
   });
 
-  const attemptRow = {
-    id: attemptId,
-    employee_id: employeeId,
-    is_guest: isGuest ? 1 : 0,
-    first_name: firstName,
-    last_name: lastName,
-    employee_no: employeeNo,
-    national_id: nationalId,
-    email,
-    date_field: dateField,
-    lang,
-    score,
-    correct_count: correct,
-    passed: passed ? 1 : 0,
-    answers_json: answersJson,
-    __isTester: isTester,
-    __isRequired: isRequired,
-  };
+  if (employeeId && canDoAgain) {
+    // The one-time override has now been used for this successful attempt.
+    await resetCanDoAgain(env, employeeId);
+  }
 
-  return finishAttempt(env, attemptRow, { employeeCanDoAgain: canDoAgain });
+  const submission = { first: firstName, last: lastName, email, id: nationalId, empnum: employeeNo, date: dateField, lang, answers: body.answers, correct, score, passed };
+  ctx.waitUntil(generateAndStorePdf(env, attemptId, submission));
+
+  return json({ ok: true, score, passed });
+}
+
+// ---------------------------------------------------------------------
+// Admin: HTML shell (GET /admin, /admin/*)
+// ---------------------------------------------------------------------
+async function handleAdminPage(request, env, pathAfterAdmin) {
+  const admin = await getAdminFromRequest(request, env);
+  if (!admin) {
+    return new Response(buildLoginPage(), { headers: { 'Content-Type': 'text/html; charset=UTF-8' } });
+  }
+  return new Response(
+    buildDashboardPage({ displayName: admin.displayName, csrfToken: admin.csrfToken, initialRoute: pathAfterAdmin }),
+    { headers: { 'Content-Type': 'text/html; charset=UTF-8' } },
+  );
+}
+
+// ---------------------------------------------------------------------
+// Admin: JSON API (all under /api/admin/*) — every route re-checks the
+// session itself; state-changing (non-GET) routes additionally require a
+// matching CSRF header.
+// ---------------------------------------------------------------------
+async function handleAdminApi(request, env, path) {
+  if (path === '/api/admin/login' && request.method === 'POST') {
+    return handleLogin(request, env);
+  }
+
+  const admin = await getAdminFromRequest(request, env);
+  if (!admin) return json({ ok: false, error: 'unauthorized' }, 401);
+
+  if (request.method !== 'GET' && !checkCsrf(request, admin)) {
+    return json({ ok: false, error: 'csrf_check_failed' }, 403);
+  }
+
+  if (path === '/api/admin/logout' && request.method === 'POST') return handleLogout(request, env, admin);
+  if (path === '/api/admin/me' && request.method === 'GET') return handleMe(admin);
+  if (path === '/api/admin/overview' && request.method === 'GET') return handleOverview(env);
+  if (path === '/api/admin/statistics' && request.method === 'GET') return handleStatistics(env);
+  if (path === '/api/admin/drivers' && request.method === 'GET') return handleDrivers(request, env);
+  if (path === '/api/admin/incomplete' && request.method === 'GET') return handleIncomplete(env);
+  if (path === '/api/admin/testers' && request.method === 'GET') return handleTesters(env);
+  if (path === '/api/admin/guests' && request.method === 'GET') return handleGuests(env);
+
+  let m;
+  if ((m = path.match(/^\/api\/admin\/drivers\/(\d+)$/)) && request.method === 'GET') {
+    return handleDriverDetail(env, Number(m[1]));
+  }
+  if ((m = path.match(/^\/api\/admin\/drivers\/(\d+)\/can-do-again$/)) && request.method === 'POST') {
+    return handleCanDoAgain(env, Number(m[1]));
+  }
+  if ((m = path.match(/^\/api\/admin\/attempts\/(\d+)$/)) && request.method === 'GET') {
+    return handleAttemptDetail(env, Number(m[1]));
+  }
+  if ((m = path.match(/^\/api\/admin\/attempts\/(\d+)\/retry-pdf$/)) && request.method === 'POST') {
+    return handleRetryPdf(env, Number(m[1]));
+  }
+  if ((m = path.match(/^\/api\/admin\/attempts\/(\d+)\/pdf$/)) && request.method === 'GET') {
+    return handleAttemptPdf(env, Number(m[1]));
+  }
+
+  return json({ ok: false, error: 'not_found' }, 404);
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    if (url.pathname === '/api/employee/verify' && request.method === 'POST') {
-      return handleVerify(request, env);
-    }
-    if (url.pathname === '/api/submit' && request.method === 'POST') {
-      return handleSubmit(request, env);
+    if (path === '/api/employee/verify' && request.method === 'POST') return handleVerify(request, env);
+    if (path === '/api/submit' && request.method === 'POST') return handleSubmit(request, env, ctx);
+
+    if (path.startsWith('/api/admin/')) return handleAdminApi(request, env, path);
+
+    if (path === '/admin' || path.startsWith('/admin/')) {
+      return handleAdminPage(request, env, path.slice('/admin'.length).replace(/^\//, ''));
     }
 
     return new Response('Not found', { status: 404 });

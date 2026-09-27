@@ -3,7 +3,7 @@ import { env, SELF } from 'cloudflare:test';
 import {
   findEmployeeByNationalId, resetCanDoAgain, countRequiredDrivers, countCompletedRequiredDrivers,
 } from '../worker/db/employees.js';
-import { createPendingAttempt, markAttemptSent, hasSentAttempt } from '../worker/db/attempts.js';
+import { createCompletedAttempt } from '../worker/db/attempts.js';
 
 // Fresh, disposable test employees — never reuse a seeded real driver, so
 // tests never consume a real person's one-time attempt.
@@ -29,7 +29,7 @@ async function insertTestEmployee(overrides = {}) {
 
 async function sendAttempt(employee, { token } = {}) {
   const submissionToken = token || crypto.randomUUID();
-  const id = await createPendingAttempt(env, {
+  return createCompletedAttempt(env, {
     employeeId: employee.id,
     isGuest: false,
     firstName: employee.first_name,
@@ -48,8 +48,6 @@ async function sendAttempt(employee, { token } = {}) {
     answersJson: '[]',
     statisticsJson: '{}',
   });
-  await markAttemptSent(env, id);
-  return id;
 }
 
 describe('employee lookup', () => {

@@ -34,8 +34,8 @@
   ],
 
   // Superseded by D1 (see above) — every submission is now stored durably
-  // in exam_attempts before email is even attempted. Left configured
-  // since it's unused-but-harmless; worker/storage.js is no longer called.
+  // in exam_attempts. Left configured since it's unused-but-harmless;
+  // worker/storage.js is no longer called.
   "kv_namespaces": [
     {
       "binding": "SUBMISSIONS_KV",
@@ -43,8 +43,20 @@
     }
   ],
 
-  // Non-secret config. RESEND_API_KEY is a secret — set it with
-  // `wrangler secret put RESEND_API_KEY`, never here.
+  // Result PDFs (superseded email attachments) — generated in the
+  // background after each submission and served only through the
+  // authenticated admin API, never publicly.
+  "r2_buckets": [
+    {
+      "binding": "PDF_BUCKET",
+      "bucket_name": "driver-safety-exam-pdfs"
+    }
+  ],
+
+  // Email reporting to Efi has been fully replaced by the /admin
+  // dashboard (see ADMIN.md) — these RESEND_* vars/secret are no longer
+  // referenced by any code path, left configured only in case a future
+  // feature wants email again; harmless to leave, safe to remove later.
   "vars": {
     "MAIL_TO": "efi@almogsea.co.il",
     "RESEND_FROM": "Driver Safety Exam <onboarding@resend.dev>"

@@ -1,4 +1,10 @@
 // Exam attempt storage + the idempotency/one-attempt logic around it.
+//
+// Completion no longer depends on email (that reporting channel was
+// removed) — an attempt is "completed" as soon as it's written to D1 with
+// a score, which happens synchronously before this ever returns. PDF
+// generation/storage in R2 is a separate, best-effort background step
+// tracked by pdf_status, and never blocks or reverses completion.
 
 export async function findAttemptByToken(env, submissionToken) {
   const row = await env.DB.prepare('SELECT * FROM exam_attempts WHERE submission_token = ?')
@@ -7,33 +13,35 @@ export async function findAttemptByToken(env, submissionToken) {
   return row || null;
 }
 
-// "Already completed" = has a *sent* attempt. A 'failed' or 'pending' one
-// (e.g. because Resend hiccuped) does not block a fresh retry — we don't
-// want to penalize a driver for our email service, and the retry path
-// (findAttemptByToken) is how a same-session retry avoids a full retake.
-export async function hasSentAttempt(env, employeeId) {
+// "Already completed" = has any stored (non-guest) attempt at all — the
+// old email_status='sent' gate doesn't apply anymore, since completion no
+// longer depends on email.
+export async function hasCompletedAttempt(env, employeeId) {
   const row = await env.DB.prepare(
-    "SELECT id FROM exam_attempts WHERE employee_id = ? AND is_guest = 0 AND email_status = 'sent' LIMIT 1",
+    'SELECT id FROM exam_attempts WHERE employee_id = ? AND is_guest = 0 LIMIT 1',
   )
     .bind(employeeId)
     .first();
   return !!row;
 }
 
-export async function createPendingAttempt(env, data) {
+export async function createCompletedAttempt(env, data) {
   const {
     employeeId, isGuest, firstName, lastName, employeeNo, nationalId, submissionToken,
     email, dateField, lang, score, correctCount, passed,
     startedAt, submittedAt, questionsSnapshot, answersJson, statisticsJson,
   } = data;
 
+  // email_status is left at its schema default ('pending') — it's a
+  // vestige of the removed email-reporting flow, no longer meaningful,
+  // and 'sent' would be actively false now that no email is sent.
   const result = await env.DB.prepare(
     `INSERT INTO exam_attempts
       (employee_id, is_guest, first_name, last_name, employee_no, national_id, submission_token,
        email, date_field, lang, score, correct_count, passed,
-       started_at, submitted_at, email_status,
+       started_at, submitted_at, completed_at, pdf_status,
        questions_snapshot, answers_json, statistics_json, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, CURRENT_TIMESTAMP)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'pending', ?, ?, ?, CURRENT_TIMESTAMP)`,
   )
     .bind(
       employeeId ?? null, isGuest ? 1 : 0, firstName, lastName, employeeNo ?? null, nationalId, submissionToken,
@@ -46,23 +54,37 @@ export async function createPendingAttempt(env, data) {
   return result.meta.last_row_id;
 }
 
-export async function markAttemptSent(env, attemptId) {
+export async function markPdfStored(env, attemptId, r2Key) {
   await env.DB.prepare(
-    "UPDATE exam_attempts SET email_status = 'sent', email_sent_at = CURRENT_TIMESTAMP, completed_at = CURRENT_TIMESTAMP, email_error = NULL WHERE id = ?",
+    "UPDATE exam_attempts SET pdf_status = 'stored', pdf_r2_key = ?, pdf_created_at = CURRENT_TIMESTAMP, pdf_error = NULL WHERE id = ?",
   )
-    .bind(attemptId)
+    .bind(r2Key, attemptId)
     .run();
 }
 
-export async function markAttemptFailed(env, attemptId, errorMessage) {
-  await env.DB.prepare("UPDATE exam_attempts SET email_status = 'failed', email_error = ? WHERE id = ?")
+export async function markPdfFailed(env, attemptId, errorMessage) {
+  await env.DB.prepare("UPDATE exam_attempts SET pdf_status = 'failed', pdf_error = ? WHERE id = ?")
     .bind(String(errorMessage || '').slice(0, 500), attemptId)
     .run();
 }
 
+export async function getAttemptById(env, attemptId) {
+  const row = await env.DB.prepare('SELECT * FROM exam_attempts WHERE id = ?').bind(attemptId).first();
+  return row || null;
+}
+
+export async function listAttemptsForEmployee(env, employeeId) {
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM exam_attempts WHERE employee_id = ? ORDER BY submitted_at DESC',
+  )
+    .bind(employeeId)
+    .all();
+  return results || [];
+}
+
 // The single "accepted" attempt per required driver for reporting: the
-// most recently *sent* one. If can_do_again allowed a second attempt, the
-// newer result supersedes the first for the report/statistics.
+// most recent one. If can_do_again allowed a second attempt, the newer
+// result supersedes the first for statistics/the drivers table.
 export async function listAcceptedRequiredDriverAttempts(env) {
   const { results } = await env.DB.prepare(
     `SELECT a.*
@@ -71,12 +93,29 @@ export async function listAcceptedRequiredDriverAttempts(env) {
      INNER JOIN (
        SELECT employee_id, MAX(submitted_at) AS max_submitted
        FROM exam_attempts
-       WHERE is_guest = 0 AND email_status = 'sent'
+       WHERE is_guest = 0
        GROUP BY employee_id
      ) latest ON latest.employee_id = a.employee_id AND latest.max_submitted = a.submitted_at
-     WHERE a.is_guest = 0 AND a.email_status = 'sent'
+     WHERE a.is_guest = 0
        AND e.role = 'driver' AND e.is_required = 1
      ORDER BY e.employee_no`,
+  ).all();
+  return results || [];
+}
+
+export async function listGuestAttempts(env) {
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM exam_attempts WHERE is_guest = 1 ORDER BY submitted_at DESC",
+  ).all();
+  return results || [];
+}
+
+export async function listTesterAttempts(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT a.* FROM exam_attempts a
+     JOIN employees e ON e.id = a.employee_id
+     WHERE a.is_guest = 0 AND e.role = 'tester'
+     ORDER BY a.submitted_at DESC`,
   ).all();
   return results || [];
 }

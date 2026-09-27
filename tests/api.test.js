@@ -76,19 +76,21 @@ describe('POST /api/submit — guest path', () => {
   it('never blocks a guest across repeated submissions, and excludes them from the required count', async () => {
     const sameId = `7${Math.floor(Math.random() * 1e8)}`.padStart(9, '0');
     const before = await env.DB.prepare(
-      "SELECT COUNT(DISTINCT employee_id) AS n FROM exam_attempts WHERE is_guest=0 AND email_status='sent'",
+      'SELECT COUNT(DISTINCT employee_id) AS n FROM exam_attempts WHERE is_guest=0',
     ).first();
 
     const r1 = await submit(validSubmitPayload({ id: sameId }));
     const r2 = await submit(validSubmitPayload({ id: sameId }));
     // Neither call is blocked with already_completed (guests are never
-    // subject to the one-attempt rule) — both fail only because Browser
-    // Run/PDF generation isn't available in this local test runtime.
+    // subject to the one-attempt rule), and both succeed — completion is
+    // the D1 write, not the background PDF step.
     expect(r1.body.error).not.toBe('already_completed');
     expect(r2.body.error).not.toBe('already_completed');
+    expect(r1.body.ok).toBe(true);
+    expect(r2.body.ok).toBe(true);
 
     const after = await env.DB.prepare(
-      "SELECT COUNT(DISTINCT employee_id) AS n FROM exam_attempts WHERE is_guest=0 AND email_status='sent'",
+      'SELECT COUNT(DISTINCT employee_id) AS n FROM exam_attempts WHERE is_guest=0',
     ).first();
     expect(after.n).toBe(before.n); // guest rows never contribute here
   });
@@ -96,19 +98,22 @@ describe('POST /api/submit — guest path', () => {
 
 describe('POST /api/submit — storage integrity + idempotency', () => {
   // 14 / 15 / 16. The full attempt (every answer, correct/incorrect,
-  // score) is stored durably even when the downstream PDF/email step
-  // fails — this local test runtime has no Browser Run binding, so every
-  // call here genuinely exercises the failure path.
-  it('stores every question/answer with correctness before the email step, and keeps it after a failure', async () => {
+  // score) is stored durably as soon as the D1 write succeeds — that IS
+  // the success boundary now, so the response is ok:true even though the
+  // background PDF/R2 step (no Browser Run binding in this local test
+  // runtime) subsequently fails and is tracked separately via pdf_status.
+  it('stores every question/answer with correctness, and succeeds even when the background PDF step fails', async () => {
     const token = crypto.randomUUID();
     const answers = new Array(20).fill(0);
     answers[1] = 3; // deliberately wrong on one question, right on the rest per QUESTIONS_HE[i].correct
     const { body } = await submit(validSubmitPayload({ submissionToken: token, answers }));
-    expect(body.ok).toBe(false); // PDF step fails locally — expected
+    expect(body.ok).toBe(true);
 
     const row = await env.DB.prepare('SELECT * FROM exam_attempts WHERE submission_token = ?').bind(token).first();
     expect(row).not.toBeNull();
-    expect(row.email_status).toBe('failed');
+    // pdf_status is updated by a background ctx.waitUntil() task whose
+    // timing relative to this query isn't guaranteed — the durability
+    // guarantee this test cares about is the row/answers existing at all.
     const stored = JSON.parse(row.answers_json);
     expect(stored).toHaveLength(20);
     stored.forEach((a) => {

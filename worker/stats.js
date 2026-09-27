@@ -38,11 +38,29 @@ export function computeCampaignStatistics(acceptedAttempts, questions) {
     missedPercent: n === 0 ? 0 : Math.round((questionMisses[i] / n) * 1000) / 10,
   }));
 
-  const mostMissed = [...questionStats].sort((a, b) => b.missedCount - a.missedCount).slice(0, 3);
-  const mostCorrect = [...questionStats].sort((a, b) => b.correctCount - a.correctCount).slice(0, 3);
+  const mostMissed = [...questionStats].sort((a, b) => b.missedCount - a.missedCount).slice(0, 5);
+  const mostCorrect = [...questionStats].sort((a, b) => b.correctCount - a.correctCount).slice(0, 5);
 
   const avgIncorrect = n === 0 ? 0
     : Math.round((acceptedAttempts.reduce((sum, a) => sum + (questions.length - a.correct_count), 0) / n) * 10) / 10;
+
+  const distributionBuckets = [
+    { label: '90-100', min: 90, max: 100 },
+    { label: '80-89', min: 80, max: 89 },
+    { label: '70-79', min: 70, max: 79 },
+    { label: '60-69', min: 60, max: 69 },
+    { label: 'מתחת ל-60', min: -Infinity, max: 59 },
+  ];
+  const scoreDistribution = distributionBuckets.map((b) => ({
+    label: b.label,
+    count: scores.filter((s) => s >= b.min && s <= b.max).length,
+  }));
+
+  const languageCounts = {};
+  acceptedAttempts.forEach((a) => {
+    const lang = a.lang || 'he';
+    languageCounts[lang] = (languageCounts[lang] || 0) + 1;
+  });
 
   return {
     totalCompleted: n,
@@ -58,5 +76,7 @@ export function computeCampaignStatistics(acceptedAttempts, questions) {
     mostMissedQuestions: mostMissed,
     mostCorrectlyAnsweredQuestions: mostCorrect,
     questionStats,
+    scoreDistribution,
+    languageCounts,
   };
 }
