@@ -4,7 +4,8 @@
 // cookies backed by D1, a double-submit CSRF token, and simple D1-based
 // login-attempt throttling.
 
-const PBKDF2_ITERATIONS = 150000;
+import { PBKDF2_ITERATIONS } from './constants.mjs';
+
 const SESSION_COOKIE = 'admin_session';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 min
