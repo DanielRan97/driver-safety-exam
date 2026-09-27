@@ -13,7 +13,8 @@
     "check-email": "node scripts/check-email.js",
     "build:worker-data": "node scripts/build-worker-data.js",
     "dev": "npm run build:worker-data && wrangler dev",
-    "deploy": "npm run build:worker-data && wrangler deploy"
+    "deploy": "npm run build:worker-data && wrangler deploy",
+    "test": "npm run build:worker-data && vitest run --config vitest.config.mjs"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.4.0",
