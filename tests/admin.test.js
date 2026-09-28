@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
 import { hashPassword } from '../worker/admin/auth.js';
 import { getQuestions } from '../worker/questions.js';
+import { randomValidIsraeliId } from './helpers/national-id.js';
 
 const QUESTIONS = getQuestions();
 
@@ -50,7 +51,7 @@ async function adminFetch(path, { method = 'GET', cookie, csrf, body, raw = fals
 }
 
 async function insertTestEmployee(overrides = {}) {
-  const nationalId = overrides.nationalId || `6${Math.floor(Math.random() * 1e8)}`.padStart(9, '0');
+  const nationalId = overrides.nationalId || randomValidIsraeliId('6');
   await env.DB.prepare(
     `INSERT INTO employees (first_name, last_name, employee_no, national_id, role, is_required, can_do_again, is_active, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -280,7 +281,7 @@ describe('admin data — overview, incomplete, exclusions', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         first: 'אורח', last: 'זר', email: 'guest@example.com',
-        id: `5${Math.floor(Math.random() * 1e8)}`.padStart(9, '0'),
+        id: randomValidIsraeliId('5'),
         empnum: '', date: '2026-09-27', lang: 'he',
         answers: QUESTIONS.map((q) => q.correct),
         submissionToken: crypto.randomUUID(),
@@ -299,7 +300,7 @@ describe('admin data — overview, incomplete, exclusions', () => {
   });
 
   it('guests appear under /api/admin/guests', async () => {
-    const guestId = `4${Math.floor(Math.random() * 1e8)}`.padStart(9, '0');
+    const guestId = randomValidIsraeliId('4');
     await SELF.fetch('https://example.com/api/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

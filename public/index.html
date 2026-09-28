@@ -965,21 +965,16 @@
     return isValidIsraeliId(v) || isValidChineseId(v);
   }
 
-  // The ID field no longer hard-requires an Israeli/Chinese checksum —
-  // the server looks it up against the employee database and decides
-  // employee-vs-guest either way (guests, e.g. visitors at the port, may
-  // not hold an ID in either format). We still require *something*
-  // reasonable was typed.
-  function isValidIdOrGuest(v){
-    return v.trim().length >= 4;
-  }
-
-  // ---------- fields ----------
+  // The ID must be a valid Israeli or Chinese ID (checksum-verified) even
+  // for guests — the server decides employee-vs-guest by looking this ID
+  // up against the employee database, but the format itself is always
+  // required, so a made-up string can't be used to dodge the one-attempt
+  // rule for a required driver.
   var fields = {
     first: {el: document.getElementById('f-first'), validate: isValidName},
     last:  {el: document.getElementById('f-last'),  validate: isValidName},
     email: {el: document.getElementById('f-email'), validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())},
-    id:    {el: document.getElementById('f-id'),    validate: isValidIdOrGuest},
+    id:    {el: document.getElementById('f-id'),    validate: isValidId},
     empnum:{el: document.getElementById('f-empnum'),validate: v => v.trim() === '' || /^\d{4}$/.test(v.trim())},
     date:  {el: document.getElementById('f-date'),  validate: v => v.trim().length > 0}
   };
@@ -1147,6 +1142,14 @@
 
       if(data && data.status === 'blocked'){
         alertBox.textContent = ui().alreadyCompleted;
+        alertBox.classList.add('show');
+        return;
+      }
+      // Shouldn't normally happen — the button's own field validation
+      // already requires isValidId — but stay defensive rather than
+      // silently proceeding if it's ever reached some other way.
+      if(data && data.status === 'invalid_id'){
+        alertBox.textContent = ui().errId;
         alertBox.classList.add('show');
         return;
       }

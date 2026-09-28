@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
+import { randomValidIsraeliId } from './helpers/national-id.js';
 
 function validSubmitPayload(overrides = {}) {
   return {
     first: 'שם',
     last: 'משפחה',
     email: 'test@example.com',
-    id: overrides.id || `8${Math.floor(Math.random() * 1e8)}`.padStart(9, '0'),
+    id: overrides.id || randomValidIsraeliId('8'),
     empnum: '',
     date: '2026-09-27',
     lang: 'he',
@@ -56,6 +57,27 @@ describe('POST /api/submit — validation', () => {
     expect(status).toBe(400);
     expect(body.error).toBe('missing submissionToken');
   });
+
+  // National ID must be a checksum-valid Israeli or Chinese ID for
+  // everyone, guests included — a made-up string is rejected server-side
+  // even if the frontend's own validation is bypassed.
+  it('rejects a made-up (non-checksum) national ID', async () => {
+    const { status, body } = await submit(validSubmitPayload({ id: 'abcd1234' }));
+    expect(status).toBe(400);
+    expect(body.error).toBe('invalid_id');
+  });
+
+  it('rejects a 9-digit number that fails the Israeli ID checksum', async () => {
+    const { status, body } = await submit(validSubmitPayload({ id: '123456789' }));
+    expect(status).toBe(400);
+    expect(body.error).toBe('invalid_id');
+  });
+
+  it('accepts a checksum-valid Israeli ID that matches no employee (guest)', async () => {
+    const { status, body } = await submit(validSubmitPayload({ id: randomValidIsraeliId('6') }));
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+  });
 });
 
 describe('POST /api/submit — guest path', () => {
@@ -74,7 +96,7 @@ describe('POST /api/submit — guest path', () => {
 
   // 10 / 12. Guests are never blocked and never counted as required drivers
   it('never blocks a guest across repeated submissions, and excludes them from the required count', async () => {
-    const sameId = `7${Math.floor(Math.random() * 1e8)}`.padStart(9, '0');
+    const sameId = randomValidIsraeliId('7');
     const before = await env.DB.prepare(
       'SELECT COUNT(DISTINCT employee_id) AS n FROM exam_attempts WHERE is_guest=0',
     ).first();

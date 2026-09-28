@@ -4,11 +4,14 @@ import {
   findEmployeeByNationalId, resetCanDoAgain, countRequiredDrivers, countCompletedRequiredDrivers,
 } from '../worker/db/employees.js';
 import { createCompletedAttempt } from '../worker/db/attempts.js';
+import { randomValidIsraeliId } from './helpers/national-id.js';
 
 // Fresh, disposable test employees — never reuse a seeded real driver, so
-// tests never consume a real person's one-time attempt.
+// tests never consume a real person's one-time attempt. The default ID is
+// checksum-valid since several of these tests call the real HTTP verify
+// endpoint, which now rejects any non-checksum-valid ID outright.
 async function insertTestEmployee(overrides = {}) {
-  const nationalId = overrides.nationalId || `9${Math.floor(Math.random() * 1e8)}`.padStart(9, '0');
+  const nationalId = overrides.nationalId || randomValidIsraeliId('9');
   await env.DB.prepare(
     `INSERT INTO employees (first_name, last_name, employee_no, national_id, role, is_required, can_do_again, is_active, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -59,15 +62,27 @@ describe('employee lookup', () => {
     expect(found.first_name).toBe('Test');
   });
 
-  // 2. Unknown ID -> guest flow (via the real HTTP endpoint)
-  it('POST /api/employee/verify returns status "guest" for an unknown ID', async () => {
+  // 2. Unknown (but checksum-valid) ID -> guest flow (via the real HTTP endpoint)
+  it('POST /api/employee/verify returns status "guest" for an unknown but valid ID', async () => {
+    const res = await SELF.fetch('https://example.com/api/employee/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nationalId: randomValidIsraeliId('2') }),
+    });
+    const body = await res.json();
+    expect(body.status).toBe('guest');
+  });
+
+  // A made-up, non-checksum-valid ID is rejected outright — it never even
+  // reaches the employee-vs-guest decision.
+  it('POST /api/employee/verify returns status "invalid_id" for a made-up ID', async () => {
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nationalId: '000000000000' }),
     });
     const body = await res.json();
-    expect(body.status).toBe('guest');
+    expect(body.status).toBe('invalid_id');
   });
 
   // 3. Inactive employee -> treated as not found (guest path), not a match
@@ -83,13 +98,14 @@ describe('employee lookup', () => {
   });
 
   // 4. ID beginning with zero survives the full HTTP round trip intact
+  // (098765431 is checksum-valid — verified against worker/validate.js's algorithm)
   it('correctly verifies an employee whose national ID starts with 0', async () => {
-    const emp = await insertTestEmployee({ nationalId: '098765432' });
-    expect(emp.national_id).toBe('098765432');
+    const emp = await insertTestEmployee({ nationalId: '098765431' });
+    expect(emp.national_id).toBe('098765431');
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: '098765432' }),
+      body: JSON.stringify({ nationalId: '098765431' }),
     });
     const body = await res.json();
     expect(body.status).toBe('ok');

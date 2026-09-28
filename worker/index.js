@@ -11,6 +11,7 @@ import {
   findAttemptByToken, hasCompletedAttempt, createCompletedAttempt, markPdfStored, markPdfFailed,
 } from './db/attempts.js';
 import { getPassingScore } from './db/settings.js';
+import { isValidNationalId } from './validate.js';
 import { getAdminFromRequest, checkCsrf } from './admin/auth.js';
 import { buildLoginPage, buildDashboardPage } from './admin/pages.js';
 import {
@@ -44,6 +45,9 @@ async function handleVerify(request, env) {
   }
   const nationalId = typeof body?.nationalId === 'string' ? body.nationalId.trim().slice(0, 50) : '';
   if (!nationalId) return json({ status: 'error', message: 'missing nationalId' }, 400);
+  // Required for everyone, guests included — a valid Israeli/Chinese ID
+  // checksum, not necessarily a registered employee (that's decided next).
+  if (!isValidNationalId(nationalId)) return json({ status: 'invalid_id' }, 400);
 
   const employee = await findEmployeeByNationalId(env, nationalId);
   if (!employee || !employee.is_active) return json({ status: 'guest' });
@@ -103,6 +107,11 @@ async function handleSubmit(request, env, ctx) {
     }
   }
   if (!EMAIL_RE.test(body.email.trim())) return json({ ok: false, error: 'invalid email' }, 400);
+  // Required for everyone, guests included — a valid Israeli/Chinese ID
+  // checksum, not necessarily a registered employee (decided further
+  // down). Checked here (not just client-side) so this can't be
+  // bypassed by a request that skips the frontend's own validation.
+  if (!isValidNationalId(body.id)) return json({ ok: false, error: 'invalid_id' }, 400);
   if (!Array.isArray(body.answers) || body.answers.length !== QUESTIONS.length) {
     return json({ ok: false, error: 'invalid answers array' }, 400);
   }
