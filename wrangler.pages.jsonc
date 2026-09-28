@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Separate Cloudflare Pages deployment of the SAME app, reachable at
+  // *.pages.dev — a workaround for networks that block/fail to resolve
+  // *.workers.dev specifically (see public/_worker.js). This does NOT
+  // replace the main Workers deployment (wrangler.jsonc); both can run
+  // side by side, pointed at the exact same D1/R2/KV resources so they
+  // share the same live data.
+  "name": "driver-safety-exam-alt",
+  "pages_build_output_dir": "./public",
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "browser": {
+    "binding": "MYBROWSER"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "driver-safety-exam-db",
+      "database_id": "20012407-66f9-43b9-b940-5a1857466249"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "SUBMISSIONS_KV",
+      "id": "a76916b6113243408cc2f350029a7acf"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "PDF_BUCKET",
+      "bucket_name": "driver-safety-exam-pdfs"
+    }
+  ],
+
+  "vars": {
+    "MAIL_TO": "efi@almogsea.co.il",
+    "RESEND_FROM": "Driver Safety Exam <onboarding@resend.dev>"
+  }
+}

@@ -272,6 +272,13 @@ export default {
       return handleAdminPage(request, env, path.slice('/admin'.length).replace(/^\//, ''));
     }
 
+    // Under the normal Workers+assets deployment, a matching static file
+    // (public/index.html, public/assets/*) is served before this fetch
+    // handler ever runs, so this line is normally unreached for real
+    // asset paths — it's here for a Pages deployment (see public/_worker.js),
+    // where every request reaches the worker and env.ASSETS.fetch() is
+    // what actually serves the static site.
+    if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response('Not found', { status: 404 });
   },
 };
