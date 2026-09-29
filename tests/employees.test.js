@@ -91,7 +91,7 @@ describe('employee lookup', () => {
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: emp.national_id }),
+      body: JSON.stringify({ nationalId: emp.national_id, empnum: emp.employee_no }),
     });
     const body = await res.json();
     expect(body.status).toBe('guest');
@@ -105,7 +105,7 @@ describe('employee lookup', () => {
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: '098765431' }),
+      body: JSON.stringify({ nationalId: '098765431', empnum: emp.employee_no }),
     });
     const body = await res.json();
     expect(body.status).toBe('ok');
@@ -119,7 +119,7 @@ describe('employee lookup', () => {
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: emp.national_id }),
+      body: JSON.stringify({ nationalId: emp.national_id, empnum: emp.employee_no }),
     });
     const body = await res.json();
     expect(body.status).toBe('blocked');
@@ -134,7 +134,7 @@ describe('employee lookup', () => {
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: emp.national_id }),
+      body: JSON.stringify({ nationalId: emp.national_id, empnum: emp.employee_no }),
     });
     const body = await res.json();
     expect(body.status).toBe('ok');
@@ -197,7 +197,7 @@ describe('Daniel Ran and Efi Caro are normal required drivers', () => {
     const res = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: DANIEL_NATIONAL_ID }),
+      body: JSON.stringify({ nationalId: DANIEL_NATIONAL_ID, empnum: daniel.employee_no }),
     });
     expect((await res.json()).status).toBe('blocked');
   });
@@ -210,7 +210,7 @@ describe('Daniel Ran and Efi Caro are normal required drivers', () => {
     const allowed = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: EFI_NATIONAL_ID }),
+      body: JSON.stringify({ nationalId: EFI_NATIONAL_ID, empnum: efi.employee_no }),
     });
     expect((await allowed.json()).status).toBe('ok');
 
@@ -221,7 +221,7 @@ describe('Daniel Ran and Efi Caro are normal required drivers', () => {
     const blockedAgain = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: EFI_NATIONAL_ID }),
+      body: JSON.stringify({ nationalId: EFI_NATIONAL_ID, empnum: efi.employee_no }),
     });
     expect((await blockedAgain.json()).status).toBe('blocked');
   });

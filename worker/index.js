@@ -6,12 +6,12 @@
 //   POST /api/admin/*                              (admin JSON API)
 import { getQuestions } from './questions.js';
 import { buildResultPdf } from './pdf.js';
-import { findEmployeeByNationalId, resetCanDoAgain } from './db/employees.js';
+import { findEmployeeByNationalId, resetCanDoAgain, isRequiredDriver } from './db/employees.js';
 import {
   findAttemptByToken, hasCompletedAttempt, createCompletedAttempt, markPdfStored, markPdfFailed,
 } from './db/attempts.js';
 import { getPassingScore } from './db/settings.js';
-import { isValidNationalId } from './validate.js';
+import { isValidNationalId, normalizeNationalId } from './validate.js';
 import { getAdminFromRequest, checkCsrf } from './admin/auth.js';
 import { buildLoginPage, buildDashboardPage } from './admin/pages.js';
 import {
@@ -22,7 +22,7 @@ import {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const QUESTIONS = getQuestions();
-const ALREADY_COMPLETED_MESSAGE = 'כבר השלמת בהצלחה את מבחן הבטיחות. אם לדעתך זו טעות, פנה למנהל.';
+const ALREADY_COMPLETED_MESSAGE = 'כבר הגשת את המבחן. לניסיון נוסף, פנה למנהל.';
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
@@ -31,6 +31,13 @@ function json(obj, status = 200) {
 function maskId(id) {
   const s = String(id || '');
   return s.length <= 3 ? '***' : `***${s.slice(-3)}`;
+}
+
+function employeeNumberError(employee, value) {
+  if (!isRequiredDriver(employee)) return null;
+  const number = typeof value === 'string' ? value.trim() : '';
+  if (!number) return 'employee_number_required';
+  return number === String(employee.employee_no || '').trim() ? null : 'employee_number_mismatch';
 }
 
 // ---------------------------------------------------------------------
@@ -50,7 +57,9 @@ async function handleVerify(request, env) {
   if (!isValidNationalId(nationalId)) return json({ status: 'invalid_id' }, 400);
 
   const employee = await findEmployeeByNationalId(env, nationalId);
-  if (!employee || !employee.is_active) return json({ status: 'guest' });
+  if (!isRequiredDriver(employee)) return json({ status: 'guest' });
+  const numberError = employeeNumberError(employee, body.empnum);
+  if (numberError) return json({ status: numberError }, 400);
 
   const isRequired = !!employee.is_required;
 
@@ -115,23 +124,33 @@ async function handleSubmit(request, env, ctx) {
   if (!Array.isArray(body.answers) || body.answers.length !== QUESTIONS.length) {
     return json({ ok: false, error: 'invalid answers array' }, 400);
   }
+  if (body.answers.some((answer) => !Number.isInteger(answer) || answer < 0 || answer > 3)) {
+    return json({ ok: false, error: 'invalid answers' }, 400);
+  }
   const submissionToken = typeof body.submissionToken === 'string' ? body.submissionToken.trim().slice(0, 100) : '';
   if (!submissionToken) return json({ ok: false, error: 'missing submissionToken' }, 400);
+
+  const nationalId = normalizeNationalId(body.id);
+  const employee = await findEmployeeByNationalId(env, nationalId);
+  const numberError = employeeNumberError(employee, body.empnum);
+  if (numberError) return json({ ok: false, error: numberError }, 400);
 
   // Idempotent retry: this exact submission already exists — never
   // rescore or duplicate, just confirm success again.
   const existing = await findAttemptByToken(env, submissionToken);
   if (existing) {
+    if (normalizeNationalId(existing.national_id) !== normalizeNationalId(body.id)) {
+      return json({ ok: false, error: 'submission_token_mismatch' }, 409);
+    }
     return json({
       ok: true,
       score: existing.score,
       passed: !!existing.passed,
       passingScore: existing.passing_score_at_submission,
+      correctCount: existing.correct_count,
+      isGuest: !!existing.is_guest,
     });
   }
-
-  const nationalId = body.id.trim().slice(0, 50);
-  const employee = await findEmployeeByNationalId(env, nationalId);
 
   let employeeId = null;
   let isGuest = true;
@@ -141,7 +160,7 @@ async function handleSubmit(request, env, ctx) {
   let employeeNo = typeof body.empnum === 'string' ? body.empnum.trim().slice(0, 50) : '';
   let canDoAgain = false;
 
-  if (employee && employee.is_active) {
+  if (isRequiredDriver(employee)) {
     employeeId = employee.id;
     isGuest = false;
     isRequired = !!employee.is_required;
@@ -203,7 +222,7 @@ async function handleSubmit(request, env, ctx) {
   };
   ctx.waitUntil(generateAndStorePdf(env, attemptId, submission));
 
-  return json({ ok: true, score, passed, passingScore });
+  return json({ ok: true, score, passed, passingScore, correctCount: correct, isGuest });
 }
 
 // ---------------------------------------------------------------------

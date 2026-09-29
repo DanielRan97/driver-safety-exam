@@ -2,6 +2,9 @@
 // in worker/index.js always runs before any admin markup is ever sent.
 
 const BRAND_CSS = `
+  @font-face{font-family:Heebo;font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/heebo-hebrew.woff2') format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+FB1D-FB4F;}
+  @font-face{font-family:Heebo;font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/heebo-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+2000-206F;}
+  :focus-visible{outline:3px solid #1450E0;outline-offset:3px;}
   :root{
     --almog-purple:#1E0080; --almog-blue:#1450E0; --almog-light-blue:#10A5FD;
     --almog-gradient: linear-gradient(90deg, var(--almog-purple) 0%, var(--almog-blue) 55%, var(--almog-light-blue) 100%);
@@ -42,7 +45,7 @@ export function buildLoginPage({ error } = {}) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>כניסת מנהל – מבחן בטיחות</title>
 <link rel="icon" href="/assets/almog-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
 <style>${BRAND_CSS}
   body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
   .login-card{width:100%;max-width:360px;background:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(20,15,70,.1);overflow:hidden;}
@@ -98,7 +101,7 @@ export function buildDashboardPage({ displayName, csrfToken, initialRoute }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>לוח בקרה – מבחן בטיחות</title>
 <link rel="icon" href="/assets/almog-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
 <style>${BRAND_CSS}
   .shell{display:flex;min-height:100vh;}
   .sidebar{width:220px;flex:0 0 auto;background:#fff;border-left:1px solid var(--line);padding:18px 14px;}
@@ -121,10 +124,10 @@ export function buildDashboardPage({ displayName, csrfToken, initialRoute }) {
   .qa-line{font-size:12.5px;padding:5px 8px;border-radius:6px;margin-bottom:3px;}
   .qa-line.correct{background:var(--success-bg);color:var(--success);font-weight:700;}
   .qa-line.wrong{background:var(--danger-bg);color:var(--danger);font-weight:700;}
-  @media (max-width:760px){ .shell{flex-direction:column;} .sidebar{width:100%;display:flex;overflow-x:auto;gap:4px;align-items:center;} .nav-item{white-space:nowrap;width:auto;} }
+  @media (max-width:760px){ .shell{flex-direction:column;} .sidebar{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;align-items:center;} .sidebar img{grid-column:1/-1;margin:0 0 8px;} .nav-item{white-space:normal;width:auto;min-height:44px;padding:10px 8px;} .main{padding:18px 16px;} }
 </style></head><body>
 <div class="shell">
-  <div class="sidebar">
+  <div class="sidebar" role="navigation" aria-label="תפריט ניהול">
     <img src="/assets/almog-logo.png" alt="ALMOG">
     <button class="nav-item" data-view="overview">סקירה כללית</button>
     <button class="nav-item" data-view="drivers">נהגים</button>
@@ -297,7 +300,7 @@ function renderAttemptsTable(attempts, showEmpNo){
 function renderGuests(){
   var el = document.getElementById('content');
   el.innerHTML = '<div class="muted">טוען...</div>';
-  api('/api/admin/guests').then(function(d){ if(d.ok) el.innerHTML = renderAttemptsTable(d.attempts, false); });
+  api('/api/admin/guests').then(function(d){ if(d.ok) el.innerHTML = '<p class="muted">תוצאות האורחים נשמרות בנפרד. הן לא נכללות במספר הנהגים, בציונים, באחוזי המעבר או בשאר הסטטיסטיקות של הנהגים.</p>' + (d.attempts.length ? renderAttemptsTable(d.attempts, false) : '<p>אין עדיין תוצאות של אורחים.</p>'); });
 }
 function renderSettings(){
   var el = document.getElementById('content');

@@ -546,7 +546,7 @@ describe('admin action — can_do_again', () => {
     const blockedVerify = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: driver.national_id }),
+      body: JSON.stringify({ nationalId: driver.national_id, empnum: driver.employee_no }),
     });
     expect((await blockedVerify.json()).status).toBe('blocked');
 
@@ -557,7 +557,7 @@ describe('admin action — can_do_again', () => {
     const allowedVerify = await SELF.fetch('https://example.com/api/employee/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nationalId: driver.national_id }),
+      body: JSON.stringify({ nationalId: driver.national_id, empnum: driver.employee_no }),
     });
     expect((await allowedVerify.json()).status).toBe('ok');
 

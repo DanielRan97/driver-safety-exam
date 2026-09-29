@@ -5,7 +5,7 @@
 
 function isValidIsraeliId(v) {
   let t = String(v ?? '').trim();
-  if (!/^\d{1,9}$/.test(t)) return false;
+  if (!/^\d{1,9}$/.test(t) || /^0+$/.test(t)) return false;
   t = t.padStart(9, '0');
   let sum = 0;
   for (let i = 0; i < 9; i++) {
@@ -28,4 +28,10 @@ function isValidChineseId(v) {
 
 export function isValidNationalId(v) {
   return isValidIsraeliId(v) || isValidChineseId(v);
+}
+
+// Use the same identity for shortened Israeli IDs and lowercase Chinese X.
+export function normalizeNationalId(v) {
+  const value = String(v ?? '').trim().toUpperCase();
+  return /^\d{1,9}$/.test(value) ? value.padStart(9, '0') : value;
 }

@@ -1,11 +1,17 @@
 // Employee lookups. national_id is always handled as a string — never
 // parsed/compared as a number (Israeli IDs can start with "0").
 
+import { normalizeNationalId } from '../validate.js';
+
+export function isRequiredDriver(employee) {
+  return !!(employee && employee.is_active && employee.role === 'driver' && employee.is_required);
+}
+
 export async function findEmployeeByNationalId(env, nationalId) {
   const row = await env.DB.prepare(
     'SELECT id, first_name, last_name, employee_no, national_id, role, is_required, can_do_again, is_active FROM employees WHERE national_id = ?',
   )
-    .bind(nationalId)
+    .bind(normalizeNationalId(nationalId))
     .first();
   return row || null;
 }
@@ -42,7 +48,7 @@ export async function countCompletedRequiredDrivers(env) {
      FROM exam_attempts a
      JOIN employees e ON e.id = a.employee_id
      WHERE a.is_guest = 0
-       AND e.role = 'driver' AND e.is_required = 1`,
+       AND e.role = 'driver' AND e.is_required = 1 AND e.is_active = 1`,
   ).first();
   return row ? row.n : 0;
 }

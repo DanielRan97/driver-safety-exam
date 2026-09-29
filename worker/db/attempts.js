@@ -94,14 +94,13 @@ export async function listAcceptedRequiredDriverAttempts(env) {
     `SELECT a.*
      FROM exam_attempts a
      JOIN employees e ON e.id = a.employee_id
-     INNER JOIN (
-       SELECT employee_id, MAX(submitted_at) AS max_submitted
-       FROM exam_attempts
-       WHERE is_guest = 0
-       GROUP BY employee_id
-     ) latest ON latest.employee_id = a.employee_id AND latest.max_submitted = a.submitted_at
      WHERE a.is_guest = 0
-       AND e.role = 'driver' AND e.is_required = 1
+       AND e.role = 'driver' AND e.is_required = 1 AND e.is_active = 1
+       AND a.id = (
+         SELECT latest.id FROM exam_attempts latest
+         WHERE latest.employee_id = a.employee_id AND latest.is_guest = 0
+         ORDER BY latest.submitted_at DESC, latest.id DESC LIMIT 1
+       )
      ORDER BY e.employee_no`,
   ).all();
   return results || [];

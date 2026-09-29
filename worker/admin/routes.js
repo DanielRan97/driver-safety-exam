@@ -335,10 +335,7 @@ export async function handleCanDoAgain(env, employeeId) {
   return json({ ok: true });
 }
 
-export async function handleRetryPdf(env, attemptId) {
-  const attempt = await getAttemptById(env, attemptId);
-  if (!attempt) return json({ ok: false, error: 'not_found' }, 404);
-
+export function buildAttemptPdfData(attempt) {
   const submission = {
     first: attempt.first_name,
     last: attempt.last_name,
@@ -356,9 +353,18 @@ export async function handleRetryPdf(env, attemptId) {
     passingScore: attempt.passing_score_at_submission,
     passed: !!attempt.passed,
   };
+  // Keep the wording and threshold from the original submission.
+  const savedQuestions = JSON.parse(attempt.questions_snapshot || 'null');
+  const questions = Array.isArray(savedQuestions) && savedQuestions.length ? savedQuestions : QUESTIONS;
+  return { submission, questions };
+}
+
+export async function handleRetryPdf(env, attemptId) {
+  const attempt = await getAttemptById(env, attemptId);
+  if (!attempt) return json({ ok: false, error: 'not_found' }, 404);
 
   try {
-    const pdfBuffer = await buildResultPdf(env, { submission, questions: QUESTIONS });
+    const pdfBuffer = await buildResultPdf(env, buildAttemptPdfData(attempt));
     const r2Key = `exam-pdfs/${attempt.id}.pdf`;
     await env.PDF_BUCKET.put(r2Key, pdfBuffer, { httpMetadata: { contentType: 'application/pdf' } });
     await env.DB.prepare(
